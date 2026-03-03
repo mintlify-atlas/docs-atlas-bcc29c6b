@@ -28,7 +28,8 @@
             "pages": [
               "index",
               "quickstart",
-              "installation"
+              "installation",
+              "cli-reference"
             ]
           },
           {
@@ -45,16 +46,21 @@
               "actions/overview",
               "actions/checkLink",
               "actions/click",
+              "actions/dragAndDrop",
               "actions/find",
               "actions/goTo",
               "actions/httpRequest",
+              "actions/loadCookie",
+              "actions/loadVariables",
+              "actions/moveTo",
+              "actions/runCode",
+              "actions/runShell",
+              "actions/saveCookie",
+              "actions/screenshot",
+              "actions/scroll",
               "actions/type",
               "actions/wait",
-              "actions/runShell",
-              "actions/runCode",
-              "actions/screenshot",
-              "actions/record",
-              "actions/loadVariables"
+              "actions/record"
             ]
           },
           {
@@ -78,7 +84,11 @@
               "api/overview",
               "api/runTests",
               "api/detectTests",
-              "api/resolveTests"
+              "api/detectAndResolveTests",
+              "api/resolveTests",
+              "api/getRunner",
+              "api/readFile",
+              "api/resolvePaths"
             ]
           },
           {

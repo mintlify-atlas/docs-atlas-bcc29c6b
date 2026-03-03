@@ -1,0 +1,459 @@
+---
+title: detectAndResolveTests()
+description: Detect and resolve tests in a single operation without executing them
+---
+
+The `detectAndResolveTests()` function chains test detection and resolution into a single operation. It's a convenience function that combines `setConfig()`, `detectTests()`, and `resolveTests()` to prepare tests for execution.
+
+## Function Signature
+
+```typescript
+async function detectAndResolveTests({
+  config
+}: {
+  config: Config
+}): Promise<ResolvedTests | null>
+```
+
+## Parameters
+
+<ParamField path="config" type="object" required>
+  Configuration object defining test detection and resolution behavior. Must conform to the [config schema](https://doc-detective.com/docs/references/schemas/config.html).
+  
+  <Expandable title="Key config properties">
+    <ParamField path="input" type="string | string[]" required>
+      Path(s) to test specifications and documentation source files. Can be specific files or directories to scan.
+    </ParamField>
+    
+    <ParamField path="recursive" type="boolean" default={true}>
+      Whether to search input directories recursively for test files.
+    </ParamField>
+    
+    <ParamField path="fileTypes" type="array" required>
+      File types to process (e.g., `['markdown']`, `['html']`, `['dita']`).
+    </ParamField>
+    
+    <ParamField path="detectSteps" type="boolean" default={true}>
+      Whether to detect test steps from markup patterns in documentation.
+    </ParamField>
+    
+    <ParamField path="runOn" type="Context[]">
+      Array of contexts (platform/browser combinations) to resolve for tests.
+    </ParamField>
+    
+    <ParamField path="relativePathBase" type="string" default="cwd">
+      How to interpret relative paths: `'cwd'` (current working directory) or `'file'` (relative to source file).
+    </ParamField>
+    
+    <ParamField path="logLevel" type="string" default="info">
+      Logging verbosity: `'silent'`, `'error'`, `'warning'`, `'info'`, or `'debug'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="resolvedTests" type="ResolvedTests | null">
+  Resolved tests ready for execution, or `null` if no tests were detected.
+  
+  <Expandable title="ResolvedTests structure">
+    <ResponseField name="resolvedTestsId" type="string">
+      Unique identifier for this resolved test set.
+    </ResponseField>
+    
+    <ResponseField name="config" type="Config">
+      The processed and validated configuration object.
+    </ResponseField>
+    
+    <ResponseField name="specs" type="Spec[]">
+      Array of test specifications with resolved contexts. Each spec contains:
+      - `specId` - Unique identifier
+      - `contentPath` - Absolute path to source file
+      - `tests` - Array of tests, each with:
+        - `testId` - Unique identifier
+        - `description` - Test description
+        - `contexts` - Array of resolved test contexts with steps
+        - Each context contains platform, browser, and step array
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { detectAndResolveTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (resolvedTests) {
+  console.log(`Resolved ${resolvedTests.specs.length} test specifications`);
+  console.log(`Config validated and ready for execution`);
+} else {
+  console.log('No tests detected in specified paths');
+}
+```
+
+```typescript TypeScript
+import { detectAndResolveTests } from 'doc-detective';
+import type { Config, ResolvedTests } from 'doc-detective';
+
+const config: Config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+const resolvedTests: ResolvedTests | null = 
+  await detectAndResolveTests({ config });
+
+if (resolvedTests) {
+  console.log(`Resolved ${resolvedTests.specs.length} test specifications`);
+  console.log(`Config validated and ready for execution`);
+} else {
+  console.log('No tests detected in specified paths');
+}
+```
+</CodeGroup>
+
+## Passing to runTests()
+
+Use resolved tests to skip detection/resolution in `runTests()`:
+
+```javascript
+const { detectAndResolveTests, runTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+// Detect and resolve once
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (!resolvedTests) {
+  console.error('No tests found');
+  process.exit(1);
+}
+
+// Run tests multiple times without re-detecting
+for (let i = 0; i < 3; i++) {
+  console.log(`Test run ${i + 1}...`);
+  const results = await runTests(config, { resolvedTests });
+  console.log(`Run ${i + 1} complete`);
+}
+```
+
+## Multiple Input Sources
+
+Detect and resolve from multiple paths:
+
+```javascript
+const { detectAndResolveTests } = require('doc-detective');
+
+const config = {
+  input: [
+    './docs/getting-started',
+    './docs/api-reference',
+    './docs/tutorials'
+  ],
+  recursive: true,
+  fileTypes: ['markdown', 'html']
+};
+
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (resolvedTests) {
+  console.log(`Total specs: ${resolvedTests.specs.length}`);
+  
+  // Count total tests and contexts
+  let testCount = 0;
+  let contextCount = 0;
+  
+  for (const spec of resolvedTests.specs) {
+    testCount += spec.tests.length;
+    for (const test of spec.tests) {
+      contextCount += test.contexts.length;
+    }
+  }
+  
+  console.log(`Total tests: ${testCount}`);
+  console.log(`Total contexts: ${contextCount}`);
+}
+```
+
+## Context Resolution
+
+Resolve tests for specific platform/browser combinations:
+
+```javascript
+const { detectAndResolveTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux', 'mac', 'windows'],
+      browsers: ['chrome']
+    },
+    {
+      platforms: ['mac'],
+      browsers: ['safari']
+    }
+  ]
+};
+
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (resolvedTests) {
+  // Each test will have multiple contexts (one per platform/browser combo)
+  for (const spec of resolvedTests.specs) {
+    for (const test of spec.tests) {
+      console.log(`Test "${test.testId}" has ${test.contexts.length} contexts`);
+      
+      for (const context of test.contexts) {
+        console.log(`  - ${context.platform} / ${context.browser?.name}`);
+      }
+    }
+  }
+}
+```
+
+## Inspecting Resolved Tests
+
+Inspect the structure of resolved tests:
+
+```javascript
+const { detectAndResolveTests } = require('doc-detective');
+const fs = require('fs');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (resolvedTests) {
+  // Save resolved tests to file for inspection
+  fs.writeFileSync(
+    './resolved-tests.json',
+    JSON.stringify(resolvedTests, null, 2)
+  );
+  
+  console.log('Resolved tests saved to resolved-tests.json');
+  
+  // Analyze steps per context
+  for (const spec of resolvedTests.specs) {
+    console.log(`\nSpec: ${spec.contentPath}`);
+    
+    for (const test of spec.tests) {
+      for (const context of test.contexts) {
+        console.log(`  Context: ${context.platform}`);
+        console.log(`    Steps: ${context.steps.length}`);
+        
+        // Count step types
+        const stepTypes = {};
+        for (const step of context.steps) {
+          const type = Object.keys(step).find(key => 
+            !['stepId', 'description', 'unsafe'].includes(key)
+          );
+          if (type) {
+            stepTypes[type] = (stepTypes[type] || 0) + 1;
+          }
+        }
+        
+        console.log('    Step types:', stepTypes);
+      }
+    }
+  }
+}
+```
+
+## Pre-Execution Validation
+
+Validate tests before execution:
+
+```javascript
+const { detectAndResolveTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (!resolvedTests || resolvedTests.specs.length === 0) {
+  console.error('No tests detected. Check your input paths and file types.');
+  process.exit(1);
+}
+
+let hasIssues = false;
+
+for (const spec of resolvedTests.specs) {
+  for (const test of spec.tests) {
+    // Check that each test has at least one context
+    if (test.contexts.length === 0) {
+      console.error(
+        `Test "${test.testId}" in ${spec.contentPath} has no contexts`
+      );
+      hasIssues = true;
+    }
+    
+    // Check that each context has steps
+    for (const context of test.contexts) {
+      if (context.steps.length === 0) {
+        console.error(
+          `Context in test "${test.testId}" has no steps`
+        );
+        hasIssues = true;
+      }
+    }
+  }
+}
+
+if (hasIssues) {
+  console.error('Test validation failed. Fix issues before running.');
+  process.exit(1);
+}
+
+console.log('All tests validated successfully');
+```
+
+## Error Handling
+
+Handle detection and resolution errors:
+
+```javascript
+const { detectAndResolveTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  logLevel: 'debug'  // Show detailed logs for troubleshooting
+};
+
+try {
+  const resolvedTests = await detectAndResolveTests({ config });
+  
+  if (!resolvedTests) {
+    console.warn('No tests detected. Possible causes:');
+    console.warn('  - Input paths are empty or invalid');
+    console.warn('  - No files match specified file types');
+    console.warn('  - Files contain no valid test specifications');
+    process.exit(1);
+  }
+  
+  console.log(`Successfully resolved ${resolvedTests.specs.length} specs`);
+  
+} catch (error) {
+  if (error.message.includes('Invalid config')) {
+    console.error('Configuration validation failed:', error.message);
+  } else if (error.message.includes('file not found')) {
+    console.error('Input path not found:', error.message);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+  process.exit(1);
+}
+```
+
+## CI/CD Integration
+
+Prepare tests in CI/CD pipelines:
+
+```javascript
+const { detectAndResolveTests } = require('doc-detective');
+
+const config = {
+  input: process.env.DOCS_PATH || './docs',
+  fileTypes: ['markdown'],
+  logLevel: process.env.CI ? 'info' : 'debug',
+  runOn: [
+    {
+      platforms: ['linux'],
+      browsers: ['chrome']
+    }
+  ]
+};
+
+console.log('Detecting and resolving documentation tests...');
+
+const resolvedTests = await detectAndResolveTests({ config });
+
+if (!resolvedTests) {
+  console.error('Failed to detect tests');
+  process.exit(1);
+}
+
+console.log(`✓ Detected ${resolvedTests.specs.length} test specifications`);
+
+// Save for later use or pass to runTests()
+if (process.env.SAVE_RESOLVED_TESTS) {
+  require('fs').writeFileSync(
+    './resolved-tests.json',
+    JSON.stringify(resolvedTests)
+  );
+  console.log('✓ Saved resolved tests to file');
+}
+```
+
+## Behavior
+
+The `detectAndResolveTests()` function performs the following steps:
+
+1. **Config Validation** - Calls `setConfig()` to validate and normalize configuration
+2. **Test Detection** - Calls `detectTests()` to scan and parse test specifications
+3. **Empty Check** - Returns `null` if no tests are detected
+4. **Test Resolution** - Calls `resolveTests()` to expand contexts and resolve paths
+5. **Return** - Returns resolved test object ready for execution
+
+This is equivalent to:
+
+```javascript
+config = await setConfig({ config });
+const detectedTests = await detectTests({ config });
+if (!detectedTests || detectedTests.length === 0) return null;
+const resolvedTests = await resolveTests({ config, detectedTests });
+return resolvedTests;
+```
+
+## Notes
+
+- Returns `null` if no tests are detected, not an empty object
+- A warning is logged if no tests are detected
+- The function validates config and detects tests before resolution
+- Relative paths in tests are resolved based on `relativePathBase` setting
+- The returned config includes all defaults and computed values
+- Test contexts are fully expanded based on `runOn` configuration
+- The `resolvedTestsId` is a unique identifier for the test run
+
+## When to Use
+
+Use `detectAndResolveTests()` when you want to:
+
+- **Prepare tests once, run multiple times** - Detect and resolve once, then execute repeatedly
+- **Inspect test structure** - Examine what tests will run before execution
+- **Validate tests** - Check test structure and context resolution before running
+- **Separate detection from execution** - Split the pipeline for complex workflows
+- **Cache resolved tests** - Save resolved tests for later use
+
+Use `runTests()` directly when you want a single operation that detects, resolves, and executes.
+
+## See Also
+
+- [detectTests()](/api/detectTests) - Detect tests without resolution
+- [resolveTests()](/api/resolveTests) - Resolve detected tests
+- [runTests()](/api/runTests) - Detect, resolve, and execute in one operation
+- [Config schema](https://doc-detective.com/docs/references/schemas/config.html) - Full configuration reference

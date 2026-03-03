@@ -1,0 +1,409 @@
+---
+title: getRunner()
+description: Create a Chrome WebDriver instance with Appium server for browser automation
+---
+
+The `getRunner()` function creates and returns a Chrome WebDriver instance with an Appium server for external libraries that need a Doc Detective runner. This is useful for integrating Doc Detective's browser automation capabilities into custom test frameworks or scripts.
+
+## Function Signature
+
+```typescript
+async function getRunner(
+  options?: {
+    config?: Config;
+    width?: number;
+    height?: number;
+    headless?: boolean;
+  }
+): Promise<{
+  runner: WebDriver;
+  appium: ChildProcess;
+  cleanup: () => Promise<void>;
+  runStep: (options: RunStepOptions) => Promise<any>;
+}>
+```
+
+## Parameters
+
+<ParamField path="options" type="object">
+  Configuration options for the runner. All properties are optional.
+  
+  <Expandable title="options properties">
+    <ParamField path="config" type="Config">
+      Doc Detective configuration object for logging and environment settings.
+    </ParamField>
+    
+    <ParamField path="width" type="number" default={1200}>
+      Browser window width in pixels.
+    </ParamField>
+    
+    <ParamField path="height" type="number" default={800}>
+      Browser window height in pixels.
+    </ParamField>
+    
+    <ParamField path="headless" type="boolean" default={true}>
+      Whether to run browser in headless mode. Set to `false` to see the browser window.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="result" type="object">
+  Object containing the runner instance and cleanup utilities.
+  
+  <Expandable title="Return object structure">
+    <ResponseField name="runner" type="WebDriver">
+      WebdriverIO remote instance for browser automation. Supports all standard WebDriver commands like `url()`, `click()`, `setValue()`, etc.
+    </ResponseField>
+    
+    <ResponseField name="appium" type="ChildProcess">
+      Appium server process. For advanced use cases. Prefer using the `cleanup()` function for termination.
+    </ResponseField>
+    
+    <ResponseField name="cleanup" type="() => Promise<void>">
+      Async function to properly cleanup the driver session and Appium server. Always call this when done to avoid resource leaks.
+    </ResponseField>
+    
+    <ResponseField name="runStep" type="(options: RunStepOptions) => Promise<any>">
+      Function to execute Doc Detective test steps using the runner. Accepts step objects conforming to the Doc Detective step schema.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { getRunner } = require('doc-detective');
+
+const { runner, cleanup } = await getRunner({
+  headless: false,
+  width: 1920,
+  height: 1080
+});
+
+try {
+  // Navigate to a page
+  await runner.url('https://example.com');
+  
+  // Find and click an element
+  const button = await runner.$('button.primary');
+  await button.click();
+  
+  // Type into an input field
+  const input = await runner.$('input[name="email"]');
+  await input.setValue('user@example.com');
+  
+  // Take a screenshot
+  await runner.saveScreenshot('./screenshot.png');
+  
+  console.log('Automation completed successfully');
+} finally {
+  // Always cleanup when done
+  await cleanup();
+}
+```
+
+```typescript TypeScript
+import { getRunner } from 'doc-detective';
+import type { Config } from 'doc-detective';
+
+const config: Config = {
+  logLevel: 'debug'
+};
+
+const { runner, cleanup } = await getRunner({
+  config,
+  headless: false,
+  width: 1920,
+  height: 1080
+});
+
+try {
+  // Navigate to a page
+  await runner.url('https://example.com');
+  
+  // Find and click an element
+  const button = await runner.$('button.primary');
+  await button.click();
+  
+  // Type into an input field
+  const input = await runner.$('input[name="email"]');
+  await input.setValue('user@example.com');
+  
+  // Take a screenshot
+  await runner.saveScreenshot('./screenshot.png');
+  
+  console.log('Automation completed successfully');
+} finally {
+  // Always cleanup when done
+  await cleanup();
+}
+```
+</CodeGroup>
+
+## Headless Mode
+
+Run tests in headless mode for CI/CD environments:
+
+```javascript
+const { getRunner } = require('doc-detective');
+
+const { runner, cleanup } = await getRunner({
+  headless: true  // Default behavior
+});
+
+try {
+  await runner.url('https://example.com');
+  const title = await runner.getTitle();
+  console.log(`Page title: ${title}`);
+} finally {
+  await cleanup();
+}
+```
+
+## Running Doc Detective Steps
+
+Execute Doc Detective test steps using the `runStep()` function:
+
+```javascript
+const { getRunner } = require('doc-detective');
+
+const config = {
+  logLevel: 'info'
+};
+
+const { runner, cleanup, runStep } = await getRunner({ config });
+
+try {
+  // Run a goTo step
+  await runStep({
+    config,
+    step: {
+      goTo: 'https://example.com',
+      description: 'Navigate to example.com'
+    },
+    driver: runner
+  });
+  
+  // Run a find step
+  await runStep({
+    config,
+    step: {
+      find: {
+        selector: 'button.primary',
+        click: true
+      },
+      description: 'Click primary button'
+    },
+    driver: runner
+  });
+  
+  console.log('Steps executed successfully');
+} finally {
+  await cleanup();
+}
+```
+
+## Custom Browser Size
+
+Specify custom window dimensions:
+
+```javascript
+const { getRunner } = require('doc-detective');
+
+// Large desktop viewport
+const { runner, cleanup } = await getRunner({
+  width: 2560,
+  height: 1440,
+  headless: true
+});
+
+try {
+  await runner.url('https://example.com');
+  
+  // Test responsive behavior at large viewport
+  const nav = await runner.$('.desktop-nav');
+  const isDisplayed = await nav.isDisplayed();
+  console.log(`Desktop nav visible: ${isDisplayed}`);
+} finally {
+  await cleanup();
+}
+```
+
+## Error Handling
+
+Properly handle errors and ensure cleanup:
+
+```javascript
+const { getRunner } = require('doc-detective');
+
+let runner, cleanup;
+
+try {
+  const result = await getRunner({
+    headless: false
+  });
+  runner = result.runner;
+  cleanup = result.cleanup;
+  
+  await runner.url('https://example.com');
+  
+  // Attempt to find element with timeout
+  const element = await runner.$('button.submit');
+  await element.waitForExist({ timeout: 5000 });
+  await element.click();
+  
+} catch (error) {
+  if (error.message.includes('not available')) {
+    console.error('Chrome browser is not installed or accessible');
+  } else if (error.message.includes('Failed to start')) {
+    console.error('Could not start Chrome runner:', error.message);
+  } else {
+    console.error('Automation error:', error.message);
+  }
+} finally {
+  // Ensure cleanup always runs
+  if (cleanup) {
+    await cleanup();
+  }
+}
+```
+
+## Integration with Test Frameworks
+
+Integrate with popular test frameworks:
+
+```javascript
+const { getRunner } = require('doc-detective');
+const assert = require('assert');
+
+describe('Documentation Tests', function() {
+  let runner, cleanup;
+  
+  // Increase timeout for browser operations
+  this.timeout(30000);
+  
+  before(async () => {
+    const result = await getRunner({ headless: true });
+    runner = result.runner;
+    cleanup = result.cleanup;
+  });
+  
+  after(async () => {
+    if (cleanup) {
+      await cleanup();
+    }
+  });
+  
+  it('should load the homepage', async () => {
+    await runner.url('https://example.com');
+    const title = await runner.getTitle();
+    assert.strictEqual(title, 'Example Domain');
+  });
+  
+  it('should find and click navigation link', async () => {
+    const link = await runner.$('a[href="/about"]');
+    await link.click();
+    await runner.waitUntil(
+      async () => (await runner.getUrl()).includes('/about'),
+      { timeout: 5000 }
+    );
+  });
+});
+```
+
+## Custom Configuration
+
+Pass custom configuration for logging:
+
+```javascript
+const { getRunner } = require('doc-detective');
+
+const config = {
+  logLevel: 'debug',
+  environment: {
+    platform: 'linux'
+  }
+};
+
+const { runner, cleanup } = await getRunner({ config });
+
+try {
+  // Debug logs will be displayed
+  await runner.url('https://example.com');
+  console.log('Current URL:', await runner.getUrl());
+} finally {
+  await cleanup();
+}
+```
+
+## Parallel Testing
+
+Create multiple runners for parallel test execution:
+
+```javascript
+const { getRunner } = require('doc-detective');
+
+async function runTest(url, testName) {
+  const { runner, cleanup } = await getRunner({ headless: true });
+  
+  try {
+    await runner.url(url);
+    const title = await runner.getTitle();
+    console.log(`${testName}: ${title}`);
+  } finally {
+    await cleanup();
+  }
+}
+
+// Run tests in parallel
+await Promise.all([
+  runTest('https://example.com', 'Test 1'),
+  runTest('https://example.org', 'Test 2'),
+  runTest('https://example.net', 'Test 3')
+]);
+
+console.log('All parallel tests completed');
+```
+
+## Behavior
+
+The `getRunner()` function performs the following steps:
+
+1. **Environment Check** - Detects the platform and available applications
+2. **Chrome Validation** - Verifies Chrome browser is installed and accessible
+3. **Appium Setup** - Sets Appium home directory and starts the Appium server
+4. **Appium Warmup** - Waits for Appium to be ready (up to 2 minutes)
+5. **Driver Configuration** - Builds Chrome driver capabilities with specified options
+6. **Driver Start** - Initializes the WebDriver session
+7. **Fallback** - If initial start fails, retries in headless mode
+8. **Window Sizing** - Sets browser window to specified dimensions
+9. **Return** - Returns runner instance with cleanup function
+
+## Notes
+
+- The function currently only supports Chrome browser
+- Appium server starts automatically and must be cleaned up with `cleanup()`
+- If the runner fails to start in the requested mode, it automatically retries in headless mode
+- The Appium server listens on `http://127.0.0.1:4723`
+- Chrome must be installed and accessible on the system
+- The runner includes a state object tracking URL and cursor position
+- Always call `cleanup()` in a `finally` block to prevent resource leaks
+- Safari users must enable remote automation: `safaridriver --enable`
+
+## Errors
+
+The function throws errors in the following cases:
+
+- Chrome browser is not available on the system
+- Appium server fails to start within the timeout period (2 minutes)
+- Chrome driver fails to initialize in both normal and headless modes
+
+## See Also
+
+- [runTests()](/api/runTests) - Execute documentation tests with full pipeline
+- [detectAndResolveTests()](/api/detectAndResolveTests) - Detect and resolve tests
+- [WebdriverIO API](https://webdriver.io/docs/api) - Full WebDriver command reference
+- [Test Actions](https://doc-detective.com/docs/references/schemas/actions.html) - Available Doc Detective step types

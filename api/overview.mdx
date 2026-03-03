@@ -17,9 +17,18 @@ npm install doc-detective
 
 The API exposes several key functions for working with documentation tests:
 
+### Test Execution
 - **[runTests()](/api/runTests)** - Execute tests with a given configuration
+- **[getRunner()](/api/getRunner)** - Create a browser automation runner instance
+
+### Test Discovery and Resolution
 - **[detectTests()](/api/detectTests)** - Discover and parse tests from input files
 - **[resolveTests()](/api/resolveTests)** - Transform detected tests into resolved specifications ready for execution
+- **[detectAndResolveTests()](/api/detectAndResolveTests)** - Chain detection and resolution in a single operation
+
+### File and Path Utilities
+- **[readFile()](/api/readFile)** - Read and parse JSON/YAML files from local or remote sources
+- **[resolvePaths()](/api/resolvePaths)** - Convert relative paths to absolute paths in config/spec objects
 
 ## Basic Usage
 

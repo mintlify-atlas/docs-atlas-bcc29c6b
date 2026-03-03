@@ -1,0 +1,241 @@
+---
+title: dragAndDrop
+description: Drag and drop elements from source to target location
+---
+
+The `dragAndDrop` action performs drag-and-drop operations by moving an element from a source location to a target location. It supports HTML5 drag-and-drop with automatic fallback mechanisms.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple
+{
+  "action": "dragAndDrop",
+  "source": "Table",
+  "target": "#canvas"
+}
+```
+
+```json With Selectors
+{
+  "action": "dragAndDrop",
+  "source": ".draggable-block",
+  "target": ".drop-zone",
+  "duration": 2000
+}
+```
+
+```json Detailed
+{
+  "action": "dragAndDrop",
+  "source": {
+    "selector": ".widget",
+    "elementText": "Data Table"
+  },
+  "target": {
+    "selector": "#design-canvas"
+  },
+  "duration": 500
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+### Source Element (Required)
+
+<ParamField path="source" type="string | object" required>
+  The element to drag. Can be a simple string (text, selector, or regex pattern) or a detailed object with multiple finding criteria.
+</ParamField>
+
+#### Simple Format
+
+When `source` is a string, it can be:
+- Display text of the element
+- CSS selector
+- Regex pattern (enclosed in forward slashes)
+
+#### Detailed Format
+
+When `source` is an object, you can use any of these properties:
+
+<ParamField path="source.selector" type="string">
+  CSS selector of the element. If combined with `elementText`, the element must match both.
+</ParamField>
+
+<ParamField path="source.elementText" type="string">
+  Display text or regex pattern (enclosed in forward slashes) of the element. If combined with `selector`, the element must match both.
+</ParamField>
+
+<ParamField path="source.elementId" type="string">
+  ID attribute of the element to find. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="source.elementTestId" type="string">
+  `data-testid` attribute of the element to find. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="source.elementClass" type="string | string[]">
+  Class or array of classes that the element must have. Each class supports exact match or regex pattern using `/pattern/` syntax. Element must have all specified classes.
+</ParamField>
+
+<ParamField path="source.elementAttribute" type="object">
+  Object of attribute key-value pairs that the element must have. Values can be strings (supporting `/pattern/` regex), numbers, or booleans. Boolean `true` matches attribute presence, `false` matches absence.
+</ParamField>
+
+<ParamField path="source.elementAria" type="string">
+  Computed accessible name of the element per ARIA specification. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="source.timeout" type="integer" default="5000">
+  Maximum duration in milliseconds to wait for the element to exist.
+</ParamField>
+
+### Target Element (Required)
+
+<ParamField path="target" type="string | object" required>
+  The target location to drop the element. Supports the same format and finding strategies as `source`.
+</ParamField>
+
+The `target` parameter supports all the same properties as `source` (selector, elementText, elementId, elementTestId, elementClass, elementAttribute, elementAria, timeout).
+
+### Drag Options
+
+<ParamField path="duration" type="integer" default="1000">
+  Duration of the drag operation in milliseconds. Controls how fast the drag animation occurs.
+</ParamField>
+
+## Examples
+
+### Basic Drag and Drop
+
+Drag by text and drop to selector:
+
+```json
+{
+  "action": "dragAndDrop",
+  "source": "Table",
+  "target": "#canvas"
+}
+```
+
+### Drag with Selectors
+
+Use CSS selectors for both source and target:
+
+```json
+{
+  "action": "dragAndDrop",
+  "source": ".draggable-block",
+  "target": ".drop-zone",
+  "duration": 2000
+}
+```
+
+### Drag with Combined Criteria
+
+Combine text and selector for precise targeting:
+
+```json
+{
+  "action": "dragAndDrop",
+  "source": {
+    "selector": ".widget",
+    "elementText": "Data Table"
+  },
+  "target": {
+    "selector": "#design-canvas"
+  },
+  "duration": 500
+}
+```
+
+### Drag with Custom Timeout
+
+Wait longer for elements to appear:
+
+```json
+{
+  "action": "dragAndDrop",
+  "source": {
+    "selector": ".draggable",
+    "timeout": 10000
+  },
+  "target": {
+    "elementText": "Drop Zone",
+    "timeout": 5000
+  }
+}
+```
+
+### Drag with Regex Patterns
+
+Use regex to match dynamic content:
+
+```json
+{
+  "action": "dragAndDrop",
+  "source": "/Widget Item.*/",
+  "target": "#canvas"
+}
+```
+
+### Drag with Multiple Regex Criteria
+
+Combine regex patterns for flexible matching:
+
+```json
+{
+  "action": "dragAndDrop",
+  "source": {
+    "selector": ".draggable",
+    "elementText": "/Button [0-9]+/"
+  },
+  "target": {
+    "elementText": "/Drop Zone.*/"
+  }
+}
+```
+
+## How It Works
+
+The `dragAndDrop` action:
+
+1. Finds both the source and target elements using the specified criteria
+2. Attempts to perform the drag-and-drop using WebDriver.io's native method
+3. Verifies the operation succeeded by checking if the source element moved
+4. If the native method fails silently, falls back to HTML5 drag-and-drop simulation
+5. Dispatches all necessary drag events: `dragstart`, `dragover`, `drop`, `dragend`
+
+<Note>
+  The action includes automatic fallback mechanisms to ensure compatibility with different drag-and-drop implementations.
+</Note>
+
+## When to Use
+
+Use `dragAndDrop` when:
+- Testing drag-and-drop interfaces like page builders or dashboards
+- Rearranging sortable lists or kanban boards
+- Moving items between containers
+- Testing file upload via drag-and-drop zones
+- Validating drag-and-drop interactions in visual editors
+
+## Error Handling
+
+The action fails when:
+- Source element is not found within the timeout period
+- Target element is not found within the timeout period
+- Element exists but is not draggable
+- Both WebDriver.io and HTML5 fallback methods fail
+
+<Tip>
+  If drag-and-drop isn't working, try increasing the `duration` parameter to allow more time for the operation to complete.
+</Tip>
+
+## Related Actions
+
+- [find](/actions/find) - Find elements before dragging
+- [click](/actions/click) - Click elements
+- [moveTo](/actions/moveTo) - Move mouse to specific positions

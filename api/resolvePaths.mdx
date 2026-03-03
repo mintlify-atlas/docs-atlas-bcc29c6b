@@ -1,0 +1,527 @@
+---
+title: resolvePaths()
+description: Convert relative path properties in config or spec objects to absolute paths
+---
+
+The `resolvePaths()` function converts recognized relative path properties in configuration or test specification objects to absolute paths. It intelligently resolves paths based on the object type and the `relativePathBase` setting.
+
+## Function Signature
+
+```typescript
+async function resolvePaths({
+  config,
+  object,
+  filePath,
+  nested = false,
+  objectType
+}: {
+  config: Config;
+  object: Config | Spec;
+  filePath: string;
+  nested?: boolean;
+  objectType?: 'config' | 'spec';
+}): Promise<Config | Spec>
+```
+
+## Parameters
+
+<ParamField path="config" type="Config" required>
+  Configuration object containing settings like `relativePathBase`.
+  
+  <Expandable title="Key config properties">
+    <ParamField path="relativePathBase" type="string" default="cwd">
+      How to interpret relative paths:
+      - `'cwd'` - Resolve relative to current working directory
+      - `'file'` - Resolve relative to the file being processed
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="object" type="Config | Spec" required>
+  The config or spec object whose path properties will be resolved. The function modifies this object in place and returns it.
+</ParamField>
+
+<ParamField path="filePath" type="string" required>
+  Reference file or directory path used to resolve relative paths. If this is a file path, the directory containing it is used as the base.
+</ParamField>
+
+<ParamField path="nested" type="boolean" default={false}>
+  Internal parameter set to `true` when invoked recursively for nested objects. Not typically used in direct calls.
+</ParamField>
+
+<ParamField path="objectType" type="'config' | 'spec'">
+  Explicitly specify whether the object is a config or spec. Required for nested invocations. For top-level calls, the function auto-detects by validating against schemas.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="resolvedObject" type="Config | Spec">
+  The same object with applicable path properties converted to absolute paths. The object is modified in place, so the return value is the same reference.
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { resolvePaths } = require('doc-detective');
+
+// Resolve paths in a config object
+const config = {
+  relativePathBase: 'file',
+  input: './docs',
+  output: './test-results',
+  setup: './setup.spec.json'
+};
+
+const resolved = await resolvePaths({
+  config,
+  object: config,
+  filePath: '/home/user/project/doc-detective.json'
+});
+
+console.log('Resolved input:', resolved.input);
+// Output: /home/user/project/docs
+
+console.log('Resolved output:', resolved.output);
+// Output: /home/user/project/test-results
+```
+
+```typescript TypeScript
+import { resolvePaths } from 'doc-detective';
+import type { Config } from 'doc-detective';
+
+// Resolve paths in a config object
+const config: Config = {
+  relativePathBase: 'file',
+  input: './docs',
+  output: './test-results',
+  setup: './setup.spec.json'
+};
+
+const resolved: Config = await resolvePaths({
+  config,
+  object: config,
+  filePath: '/home/user/project/doc-detective.json'
+});
+
+console.log('Resolved input:', resolved.input);
+// Output: /home/user/project/docs
+
+console.log('Resolved output:', resolved.output);
+// Output: /home/user/project/test-results
+```
+</CodeGroup>
+
+## Resolving Config Paths
+
+Resolve paths in configuration objects:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+const path = require('path');
+
+const config = {
+  relativePathBase: 'cwd',
+  input: './docs',
+  output: './test-results',
+  mediaDirectory: './media',
+  beforeAny: './setup.spec.json',
+  afterAll: './cleanup.spec.json'
+};
+
+// Resolve relative to current working directory
+const resolved = await resolvePaths({
+  config,
+  object: config,
+  filePath: process.cwd()
+});
+
+console.log('All paths are now absolute:');
+console.log('  Input:', resolved.input);
+console.log('  Output:', resolved.output);
+console.log('  Media:', resolved.mediaDirectory);
+console.log('  Setup:', resolved.beforeAny);
+console.log('  Cleanup:', resolved.afterAll);
+```
+
+## Resolving Spec Paths
+
+Resolve paths in test specification objects:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'file'
+};
+
+const spec = {
+  tests: [
+    {
+      id: 'test-1',
+      steps: [
+        {
+          runShell: {
+            command: 'node',
+            args: ['./scripts/setup.js']
+          }
+        },
+        {
+          screenshot: {
+            path: './screenshots/result.png'
+          }
+        }
+      ]
+    }
+  ]
+};
+
+const resolved = await resolvePaths({
+  config,
+  object: spec,
+  filePath: '/home/user/project/tests/spec.json'
+});
+
+console.log('Resolved screenshot path:', 
+  resolved.tests[0].steps[1].screenshot.path
+);
+// Output: /home/user/project/tests/screenshots/result.png
+```
+
+## File-Based Path Resolution
+
+Resolve paths relative to the source file:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'file'  // Resolve relative to file location
+};
+
+const spec = {
+  tests: [
+    {
+      id: 'api-test',
+      before: '../common/setup.json',
+      after: '../common/cleanup.json',
+      steps: [
+        {
+          loadVariables: './variables.json'
+        }
+      ]
+    }
+  ]
+};
+
+// Paths resolved relative to spec file location
+const resolved = await resolvePaths({
+  config,
+  object: spec,
+  filePath: '/home/user/project/tests/api/spec.json'
+});
+
+console.log('Setup:', resolved.tests[0].before);
+// Output: /home/user/project/tests/common/setup.json
+
+console.log('Variables:', resolved.tests[0].steps[0].loadVariables);
+// Output: /home/user/project/tests/api/variables.json
+```
+
+## CWD-Based Path Resolution
+
+Resolve paths relative to current working directory:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'cwd'  // Resolve relative to cwd
+};
+
+const testConfig = {
+  input: './docs',
+  output: './results'
+};
+
+// Paths resolved relative to cwd, not file location
+const resolved = await resolvePaths({
+  config,
+  object: testConfig,
+  filePath: '/some/other/path/config.json'
+});
+
+console.log('Input:', resolved.input);
+// Output: /current/working/directory/docs
+
+console.log('Output:', resolved.output);
+// Output: /current/working/directory/results
+```
+
+## Preserving Absolute Paths
+
+Absolute paths are left unchanged:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'file'
+};
+
+const testConfig = {
+  input: '/absolute/path/to/docs',
+  output: './relative/output'
+};
+
+const resolved = await resolvePaths({
+  config,
+  object: testConfig,
+  filePath: '/home/user/project/config.json'
+});
+
+console.log('Absolute path unchanged:', resolved.input);
+// Output: /absolute/path/to/docs
+
+console.log('Relative path resolved:', resolved.output);
+// Output: /home/user/project/relative/output
+```
+
+## Preserving URLs
+
+HTTP/HTTPS URLs and Heretto URIs are never modified:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'file'
+};
+
+const testConfig = {
+  input: 'https://example.com/docs',
+  setup: 'heretto:setup-id',
+  output: './results'
+};
+
+const resolved = await resolvePaths({
+  config,
+  object: testConfig,
+  filePath: '/home/user/project/config.json'
+});
+
+console.log('URL unchanged:', resolved.input);
+// Output: https://example.com/docs
+
+console.log('Heretto URI unchanged:', resolved.setup);
+// Output: heretto:setup-id
+
+console.log('Relative path resolved:', resolved.output);
+// Output: /home/user/project/results
+```
+
+## Handling Arrays
+
+Resolve paths in array properties:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'file'
+};
+
+const testConfig = {
+  input: [
+    './docs/getting-started',
+    './docs/api',
+    './docs/tutorials'
+  ]
+};
+
+const resolved = await resolvePaths({
+  config,
+  object: testConfig,
+  filePath: '/home/user/project/config.json'
+});
+
+console.log('All array items resolved:');
+resolved.input.forEach((path, index) => {
+  console.log(`  ${index}: ${path}`);
+});
+// Output:
+//   0: /home/user/project/docs/getting-started
+//   1: /home/user/project/docs/api
+//   2: /home/user/project/docs/tutorials
+```
+
+## Nested Object Resolution
+
+Resolve paths in nested objects:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = {
+  relativePathBase: 'file'
+};
+
+const spec = {
+  tests: [
+    {
+      id: 'test-1',
+      steps: [
+        {
+          runShell: {
+            command: 'node',
+            workingDirectory: './scripts',
+            file: './scripts/test.js'
+          }
+        },
+        {
+          screenshot: {
+            directory: './screenshots'
+          }
+        }
+      ]
+    }
+  ]
+};
+
+const resolved = await resolvePaths({
+  config,
+  object: spec,
+  filePath: '/home/user/project/tests/spec.json'
+});
+
+console.log('Nested paths resolved:');
+const step1 = resolved.tests[0].steps[0].runShell;
+console.log('  Working dir:', step1.workingDirectory);
+console.log('  File:', step1.file);
+
+const step2 = resolved.tests[0].steps[1].screenshot;
+console.log('  Screenshot dir:', step2.directory);
+```
+
+## Auto-Detection
+
+The function auto-detects config vs. spec objects:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+const config = { relativePathBase: 'file' };
+
+// Auto-detected as config (has 'input' property)
+const configObj = {
+  input: './docs',
+  output: './results'
+};
+
+const resolvedConfig = await resolvePaths({
+  config,
+  object: configObj,
+  filePath: '/home/user/config.json'
+});
+
+console.log('Auto-detected as config');
+
+// Auto-detected as spec (has 'tests' property)
+const specObj = {
+  tests: [
+    {
+      id: 'test-1',
+      steps: []
+    }
+  ]
+};
+
+const resolvedSpec = await resolvePaths({
+  config,
+  object: specObj,
+  filePath: '/home/user/spec.json'
+});
+
+console.log('Auto-detected as spec');
+```
+
+## Behavior
+
+The `resolvePaths()` function performs the following steps:
+
+1. **Object Type Detection** - Validates object against config and spec schemas to determine type (unless `objectType` is provided)
+2. **Path Property Identification** - Identifies properties that contain paths based on object type
+3. **Recursive Processing** - Recursively processes nested objects and arrays
+4. **Path Resolution** - For each path property:
+   - Preserves absolute paths
+   - Preserves URLs (`http://`, `https://`, `heretto:`)
+   - Resolves relative paths based on `relativePathBase`:
+     - `'cwd'` - Resolves against current working directory
+     - `'file'` - Resolves against file directory
+5. **In-Place Modification** - Modifies the object in place and returns it
+
+## Recognized Path Properties
+
+The function recognizes these path properties:
+
+**Config properties:**
+- `input`, `output`, `loadVariables`, `setup`, `cleanup`, `configPath`, `beforeAny`, `afterAll`, `mediaDirectory`, `downloadDirectory`, `descriptionPath`, `path`
+
+**Spec properties:**
+- `file`, `path`, `directory`, `before`, `after`, `loadVariables`, `setup`, `cleanup`, `savePath`, `saveDirectory`, `specPath`, `descriptionPath`, `workingDirectory`
+
+**Excluded from resolution:**
+- User-configurable objects: `requestData`, `responseData`, `requestHeaders`, `responseHeaders`, `requestParams`, `responseParams`
+
+## Notes
+
+- The function modifies the object in place and returns the same reference
+- File paths are checked for existence to determine if they're files or directories
+- If a file doesn't exist, the extension is used to infer whether it's a file
+- The `directory` property affects resolution of nested `path` properties
+- Empty or null objects are returned unchanged
+- Invalid objects (not config or spec) throw an error
+- Nested objects inherit the parent object type
+- The function recursively processes all nested objects and arrays
+
+## Errors
+
+The function throws errors in these cases:
+
+```javascript
+const { resolvePaths } = require('doc-detective');
+
+try {
+  // Error: Invalid object (neither config nor spec)
+  await resolvePaths({
+    config: { relativePathBase: 'file' },
+    object: { invalid: 'object' },
+    filePath: '/path/to/file.json'
+  });
+} catch (error) {
+  console.error(error.message);
+  // "Object isn't a valid config or spec."
+}
+
+try {
+  // Error: Missing objectType for nested call
+  await resolvePaths({
+    config: { relativePathBase: 'file' },
+    object: { input: './docs' },
+    filePath: '/path/to/file.json',
+    nested: true
+    // Missing objectType
+  });
+} catch (error) {
+  console.error(error.message);
+  // "Object type is required for nested objects."
+}
+```
+
+## See Also
+
+- [readFile()](/api/readFile) - Read files from URLs or paths
+- [detectTests()](/api/detectTests) - Detect tests from files
+- [resolveTests()](/api/resolveTests) - Resolve detected tests
+- [Config schema](https://doc-detective.com/docs/references/schemas/config.html) - Config object structure
+- [Spec schema](https://doc-detective.com/docs/references/schemas/spec.html) - Spec object structure

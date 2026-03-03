@@ -1,0 +1,223 @@
+---
+title: scroll
+description: Scroll the page by a specified number of pixels
+---
+
+The `scroll` action scrolls the page by the specified number of pixels along the X and/or Y axis. This action only runs when a test recording is in progress.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Scroll Down
+{
+  "action": "scroll",
+  "y": 100
+}
+```
+
+```json Scroll Right
+{
+  "action": "scroll",
+  "x": 100
+}
+```
+
+```json Scroll Both Axes
+{
+  "action": "scroll",
+  "x": 100,
+  "y": 100
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+At least one of `x` or `y` must be specified.
+
+<ParamField path="x" type="integer">
+  Number of pixels to scroll along the X axis (horizontal).
+  
+  - Positive values scroll to the right
+  - Negative values scroll to the left
+</ParamField>
+
+<ParamField path="y" type="integer">
+  Number of pixels to scroll along the Y axis (vertical).
+  
+  - Positive values scroll down (toward the bottom)
+  - Negative values scroll up (toward the top)
+</ParamField>
+
+## Examples
+
+### Scroll Down
+
+Scroll down by 100 pixels:
+
+```json
+{
+  "action": "scroll",
+  "y": 100
+}
+```
+
+### Scroll Up
+
+Scroll up by 200 pixels:
+
+```json
+{
+  "action": "scroll",
+  "y": -200
+}
+```
+
+### Scroll Right
+
+Scroll right by 100 pixels:
+
+```json
+{
+  "action": "scroll",
+  "x": 100
+}
+```
+
+### Scroll Left
+
+Scroll left by 150 pixels:
+
+```json
+{
+  "action": "scroll",
+  "x": -150
+}
+```
+
+### Diagonal Scroll
+
+Scroll both horizontally and vertically:
+
+```json
+{
+  "action": "scroll",
+  "x": 100,
+  "y": 100
+}
+```
+
+### Large Scroll
+
+Scroll down a full page (approximately):
+
+```json
+{
+  "action": "scroll",
+  "y": 800
+}
+```
+
+## Real-World Example
+
+Scroll through a long page to reveal content:
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://example.com/long-page"
+        },
+        {
+          "action": "scroll",
+          "y": 500
+        },
+        {
+          "action": "find",
+          "selector": "#middle-section"
+        },
+        {
+          "action": "scroll",
+          "y": 500
+        },
+        {
+          "action": "find",
+          "selector": "#footer"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## How It Works
+
+The `scroll` action:
+
+1. Checks if a video recording or debug recording is in progress
+2. If no recording is active, skips the action (returns PASS but does nothing)
+3. If recording is active, uses the browser's mouse wheel API to scroll
+4. Scrolls by the specified delta values on each axis
+
+<Note>
+  This action is primarily designed for recording purposes to capture scrolling behavior in videos. If you need to scroll to make elements visible for interaction, consider using the [find](/actions/find) action instead, which automatically scrolls elements into view.
+</Note>
+
+## Recording-Only Behavior
+
+The `scroll` action has special behavior:
+
+- Only executes when a recording is in progress (video or debug recording)
+- When no recording is active, the action is skipped
+- Returns PASS status in both cases
+
+<Warning>
+  If you need to scroll to reveal elements for testing (not recording), use the [find](/actions/find) action with `moveTo: true` instead. The `find` action automatically scrolls elements into view when needed.
+</Warning>
+
+## Scroll Direction Reference
+
+### Vertical Scrolling (Y axis)
+
+- `y: 100` - Scroll DOWN by 100 pixels
+- `y: -100` - Scroll UP by 100 pixels
+
+### Horizontal Scrolling (X axis)
+
+- `x: 100` - Scroll RIGHT by 100 pixels
+- `x: -100` - Scroll LEFT by 100 pixels
+
+## When to Use
+
+Use `scroll` when:
+- Recording test videos that need to show scrolling behavior
+- Demonstrating long pages or scrollable content in recordings
+- Creating visual documentation that includes scroll interactions
+- Capturing scrolling animations in debug recordings
+
+Do NOT use `scroll` when:
+- You need to scroll to make elements visible for testing (use `find` instead)
+- No recording is active (action will be skipped)
+- You want to test scroll-triggered behaviors (use browser's native scroll methods)
+
+## Error Handling
+
+The action fails when:
+- Neither `x` nor `y` is specified
+- Scroll operation cannot be performed by the browser
+
+<Tip>
+  For most testing scenarios, you don't need to explicitly scroll. The [find](/actions/find) action automatically scrolls elements into view when necessary.
+</Tip>
+
+## Related Actions
+
+- [find](/actions/find) - Find elements (automatically scrolls into view)
+- [moveTo](/actions/moveTo) - Move cursor to element position
+- [wait](/actions/wait) - Wait between actions
+- [record](/actions/record) - Start/stop video recording

@@ -1,0 +1,331 @@
+---
+title: saveCookie
+description: Save a specific browser cookie to a file or environment variable for later reuse
+---
+
+The `saveCookie` action saves a specific browser cookie to a file or environment variable, allowing you to persist authentication state or other cookie-based data for later use.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json To File
+{
+  "action": "saveCookie",
+  "name": "auth_cookie",
+  "path": "auth-cookie.txt"
+}
+```
+
+```json To Environment Variable
+{
+  "action": "saveCookie",
+  "name": "session_token",
+  "variable": "SESSION_TOKEN"
+}
+```
+
+```json Simple String
+{
+  "action": "saveCookie",
+  "saveCookie": "session_token"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+### Simple Format
+
+<ParamField path="saveCookie" type="string">
+  Cookie name. If the string ends with `.txt`, it's treated as both the cookie name (without extension) and the file path. Otherwise, the cookie is saved to an environment variable with the same name.
+</ParamField>
+
+### Detailed Format
+
+When using an object, the following parameters are available:
+
+<ParamField path="name" type="string" required>
+  Name of the specific cookie to save.
+</ParamField>
+
+<ParamField path="variable" type="string">
+  Environment variable name to store the cookie as a JSON string. Cannot be used with `path` or `directory`.
+</ParamField>
+
+<ParamField path="path" type="string">
+  File path to save the cookie, relative to `directory`. Uses Netscape cookie format. Cannot be used with `variable`.
+</ParamField>
+
+<ParamField path="directory" type="string">
+  Directory to save the cookie file. If not specified, uses the output directory from config. Cannot be used with `variable`.
+</ParamField>
+
+<ParamField path="overwrite" type="boolean" default="false">
+  Whether to overwrite an existing cookie file. If `false` and the file exists, the action fails.
+</ParamField>
+
+<ParamField path="domain" type="string">
+  Specific domain to filter the cookie by. Optional.
+</ParamField>
+
+## Examples
+
+### Save to Environment Variable (Simple)
+
+Save a cookie to an environment variable:
+
+```json
+{
+  "action": "saveCookie",
+  "saveCookie": "session_token"
+}
+```
+
+This saves the `session_token` cookie to the `session_token` environment variable.
+
+### Save to File (Simple)
+
+Save a cookie to a file:
+
+```json
+{
+  "action": "saveCookie",
+  "saveCookie": "session_token.txt"
+}
+```
+
+This saves the `session_token` cookie to `session_token.txt`.
+
+### Save to File (Detailed)
+
+Explicitly specify the file path:
+
+```json
+{
+  "action": "saveCookie",
+  "name": "auth_cookie",
+  "path": "auth-cookie.txt"
+}
+```
+
+### Save to Environment Variable (Detailed)
+
+Explicitly specify the environment variable:
+
+```json
+{
+  "action": "saveCookie",
+  "name": "session_token",
+  "variable": "SESSION_TOKEN"
+}
+```
+
+### Save with Overwrite
+
+Allow overwriting existing files:
+
+```json
+{
+  "action": "saveCookie",
+  "name": "test_cookie",
+  "path": "test-cookie.txt",
+  "overwrite": true
+}
+```
+
+### Save to Custom Directory
+
+Specify a custom directory:
+
+```json
+{
+  "action": "saveCookie",
+  "name": "user_session",
+  "path": "user-session.txt",
+  "directory": "./test-data",
+  "overwrite": true
+}
+```
+
+### Save with Domain Filter
+
+Save a cookie for a specific domain:
+
+```json
+{
+  "action": "saveCookie",
+  "name": "login_token",
+  "path": "login-token.txt",
+  "domain": "app.example.com"
+}
+```
+
+## Real-World Example
+
+Capture authentication cookie after login:
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://app.example.com/login"
+        },
+        {
+          "action": "find",
+          "selector": "#username",
+          "click": true,
+          "type": "testuser"
+        },
+        {
+          "action": "find",
+          "selector": "#password",
+          "click": true,
+          "type": "password123"
+        },
+        {
+          "action": "click",
+          "selector": "#login-button"
+        },
+        {
+          "action": "find",
+          "selector": ".dashboard"
+        },
+        {
+          "action": "saveCookie",
+          "name": "auth_token",
+          "path": "auth-token.txt",
+          "directory": "./test-data",
+          "overwrite": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+## How It Works
+
+The `saveCookie` action:
+
+1. Retrieves all cookies from the current browser session
+2. Finds the specific cookie by name (and optionally domain)
+3. Formats the cookie data appropriately for the destination
+4. Saves to either an environment variable (as JSON) or a file (Netscape format)
+5. Creates parent directories if needed
+6. Checks for existing files if `overwrite` is false
+
+<Note>
+  Cookie values are redacted in debug logs for security. The actual values are saved to the destination but not displayed in log output.
+</Note>
+
+## Cookie File Format
+
+When saving to a file, the action uses **Netscape cookie format**:
+
+```
+# Netscape HTTP Cookie File
+# This is a cookie file saved by Doc Detective
+.example.com	TRUE	/	TRUE	1735689600	session_token	abc123xyz
+```
+
+Format: `domain` `flag` `path` `secure` `expiry` `name` `value`
+
+## Environment Variable Format
+
+When saving to an environment variable, the cookie is stored as a JSON string:
+
+```json
+{
+  "name": "session_token",
+  "value": "abc123xyz",
+  "domain": ".example.com",
+  "path": "/",
+  "secure": true,
+  "httpOnly": true,
+  "sameSite": "Lax",
+  "expiry": 1735689600
+}
+```
+
+## When to Use
+
+Use `saveCookie` when:
+- Capturing authentication state after login
+- Persisting session data between test runs
+- Saving cookies for use in other tests
+- Creating reusable authentication fixtures
+- Storing test data in cookies
+
+## File Handling
+
+### Directory Creation
+
+The action automatically creates parent directories if they don't exist.
+
+### Overwrite Protection
+
+By default, the action fails if the target file already exists. Set `overwrite: true` to allow overwriting.
+
+```json
+{
+  "action": "saveCookie",
+  "name": "auth_cookie",
+  "path": "auth-cookie.txt",
+  "overwrite": true
+}
+```
+
+## Domain Filtering
+
+When multiple cookies with the same name exist for different domains, use the `domain` parameter to specify which one to save:
+
+```json
+{
+  "action": "saveCookie",
+  "name": "session_id",
+  "path": "session.txt",
+  "domain": "app.example.com"
+}
+```
+
+The action matches:
+- Exact domain matches
+- Domain with leading dot (`.example.com`)
+- Domains ending with the specified domain
+
+## Error Handling
+
+The action fails when:
+- Cookie with specified name not found
+- Cookie not found for specified domain
+- File already exists and `overwrite` is false
+- Neither `variable` nor `path` is specified
+- Cookie name is not specified
+- Cannot write to file (permission issues, etc.)
+
+<Tip>
+  Always use `overwrite: true` in development and testing to avoid failures from leftover files.
+</Tip>
+
+## Security Considerations
+
+- Cookie values are redacted in logs
+- Files are saved with standard file permissions
+- Sensitive cookies should be stored securely
+- Environment variables persist only for the current process
+- Consider using `.gitignore` for cookie files
+
+<Warning>
+  Cookie files contain sensitive authentication data. Add them to `.gitignore` and never commit them to version control.
+</Warning>
+
+## Related Actions
+
+- [loadCookie](/actions/loadCookie) - Load cookies from file or environment variable
+- [goTo](/actions/goTo) - Navigate to pages (before saving cookies)
+- [find](/actions/find) - Verify page state before saving cookies

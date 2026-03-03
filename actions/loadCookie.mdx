@@ -1,0 +1,274 @@
+---
+title: loadCookie
+description: Load a specific cookie from a file or environment variable into the browser
+---
+
+The `loadCookie` action loads a specific browser cookie from a file or environment variable, allowing you to restore authentication state or other cookie-based data during tests.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Cookie Name
+{
+  "action": "loadCookie",
+  "name": "session_token",
+  "variable": "AUTH_COOKIE"
+}
+```
+
+```json From File
+{
+  "action": "loadCookie",
+  "name": "session_token",
+  "path": "session-token.txt"
+}
+```
+
+```json Simple String
+{
+  "action": "loadCookie",
+  "loadCookie": "session_token"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+### Simple Format
+
+<ParamField path="loadCookie" type="string">
+  Cookie name or file path. If the string ends with `.txt`, it's treated as a file path. Otherwise, it's treated as a cookie name to load from an environment variable.
+</ParamField>
+
+### Detailed Format
+
+When using an object, the following parameters are available:
+
+<ParamField path="name" type="string" required>
+  Name of the specific cookie to load.
+</ParamField>
+
+<ParamField path="variable" type="string">
+  Environment variable name containing the cookie as a JSON string. Cannot be used with `path` or `directory`.
+</ParamField>
+
+<ParamField path="path" type="string">
+  File path to cookie file, relative to `directory`. Supports Netscape cookie format. Cannot be used with `variable`.
+</ParamField>
+
+<ParamField path="directory" type="string">
+  Directory containing the cookie file. If not specified, uses the output directory from config. Cannot be used with `variable`.
+</ParamField>
+
+<ParamField path="domain" type="string">
+  Specific domain to filter the cookie by when loading from a multi-cookie file. Optional.
+</ParamField>
+
+## Examples
+
+### Load from Environment Variable (Simple)
+
+Load a cookie by name from environment variable:
+
+```json
+{
+  "action": "loadCookie",
+  "loadCookie": "session_token"
+}
+```
+
+This looks for the cookie data in the `session_token` environment variable.
+
+### Load from File (Simple)
+
+Load a cookie from a file:
+
+```json
+{
+  "action": "loadCookie",
+  "loadCookie": "./test-data/auth-session.txt"
+}
+```
+
+### Load from Environment Variable (Detailed)
+
+Explicitly specify environment variable:
+
+```json
+{
+  "action": "loadCookie",
+  "name": "auth_cookie",
+  "variable": "AUTH_COOKIE"
+}
+```
+
+### Load from File (Detailed)
+
+Load a specific cookie from a file:
+
+```json
+{
+  "action": "loadCookie",
+  "name": "test_cookie",
+  "path": "test-cookie.txt"
+}
+```
+
+### Load with Custom Directory
+
+Specify the directory containing the cookie file:
+
+```json
+{
+  "action": "loadCookie",
+  "name": "session_token",
+  "path": "session-token.txt",
+  "directory": "./test-data"
+}
+```
+
+### Load with Domain Filter
+
+Load a specific cookie for a domain from a multi-cookie file:
+
+```json
+{
+  "action": "loadCookie",
+  "name": "user_session",
+  "path": "saved-cookies.txt",
+  "domain": "app.example.com"
+}
+```
+
+## Real-World Example
+
+Restore authentication state before testing:
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://app.example.com"
+        },
+        {
+          "action": "loadCookie",
+          "name": "auth_token",
+          "path": "auth-token.txt",
+          "directory": "./test-data"
+        },
+        {
+          "action": "goTo",
+          "url": "https://app.example.com/dashboard"
+        },
+        {
+          "action": "find",
+          "selector": ".user-profile"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## How It Works
+
+The `loadCookie` action:
+
+1. Determines the cookie source (environment variable or file)
+2. Loads the cookie data from the specified source
+3. Parses the cookie data (Netscape format for files, JSON for environment variables)
+4. Finds the specific cookie by name (and optionally domain)
+5. Validates domain compatibility with the current page
+6. Handles `sameSite` and `secure` attributes appropriately
+7. Sets the cookie in the browser
+
+<Note>
+  The action automatically handles cookie security requirements, such as ensuring `secure: true` when `sameSite: "None"` on HTTPS pages.
+</Note>
+
+## Cookie File Format
+
+The action supports **Netscape cookie format** for files:
+
+```
+# Netscape HTTP Cookie File
+.example.com	TRUE	/	TRUE	1735689600	session_token	abc123xyz
+```
+
+Format: `domain` `flag` `path` `secure` `expiry` `name` `value`
+
+You can also use the `#HttpOnly_` prefix for HttpOnly cookies:
+
+```
+#HttpOnly_.example.com	TRUE	/	TRUE	1735689600	auth_token	secret123
+```
+
+## Environment Variable Format
+
+When loading from environment variables, the cookie should be stored as a JSON string:
+
+```json
+{
+  "name": "session_token",
+  "value": "abc123xyz",
+  "domain": ".example.com",
+  "path": "/",
+  "secure": true,
+  "httpOnly": true,
+  "sameSite": "Lax"
+}
+```
+
+## Domain Compatibility
+
+The action checks domain compatibility:
+
+- Cookie domain must match the current page domain
+- Supports exact matches and subdomain matches
+- Automatically handles leading dots in cookie domains
+- Special handling for localhost and private IP addresses
+
+<Warning>
+  If the cookie domain doesn't match the current page domain, the action will fail. Make sure you're on the correct domain before loading cookies.
+</Warning>
+
+## When to Use
+
+Use `loadCookie` when:
+- Restoring authentication state from previous tests
+- Bypassing login flows in test scenarios
+- Testing authenticated user experiences
+- Sharing session data across test runs
+- Loading test data stored in cookies
+
+## Error Handling
+
+The action fails when:
+- Environment variable not found or empty
+- File not found at specified path
+- Cookie data is invalid or cannot be parsed
+- Cookie with specified name not found in file
+- Cookie domain is incompatible with current page
+- No cookie source specified (neither file nor variable)
+
+<Tip>
+  Use [saveCookie](/actions/saveCookie) to capture cookies during one test and load them in subsequent tests.
+</Tip>
+
+## Security Considerations
+
+- Cookie values are redacted in debug logs
+- The action validates `sameSite` and `secure` attributes
+- HttpOnly cookies are preserved when loading from files
+- Expired cookies are not loaded
+
+## Related Actions
+
+- [saveCookie](/actions/saveCookie) - Save cookies to file or environment variable
+- [goTo](/actions/goTo) - Navigate to pages (before loading cookies)
+- [loadVariables](/actions/loadVariables) - Load other test variables

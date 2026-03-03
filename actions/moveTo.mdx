@@ -1,0 +1,235 @@
+---
+title: moveTo
+description: Move the mouse cursor to a specific location on the page
+---
+
+The `moveTo` action moves the mouse cursor to a specific element with precise control over alignment and offset. This is useful for testing hover states, tooltips, or preparing for manual interactions.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple
+{
+  "action": "moveTo",
+  "selector": "#searchInput"
+}
+```
+
+```json With Alignment
+{
+  "action": "moveTo",
+  "selector": "#searchInput",
+  "alignment": "left"
+}
+```
+
+```json With Offset
+{
+  "action": "moveTo",
+  "selector": "#searchInput",
+  "alignment": "left",
+  "offset": {
+    "x": 10,
+    "y": 10
+  }
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+### Element Selection
+
+<ParamField path="selector" type="string" required>
+  CSS selector of the element to move the cursor to.
+</ParamField>
+
+### Position Options
+
+<ParamField path="alignment" type="string" default="center">
+  Alignment of the cursor relative to the element.
+  
+  Options:
+  - `"center"` - Center of the element
+  - `"top"` - Top center of the element
+  - `"bottom"` - Bottom center of the element
+  - `"left"` - Left center of the element
+  - `"right"` - Right center of the element
+</ParamField>
+
+<ParamField path="offset" type="object">
+  Offset from the aligned position.
+  
+  Properties:
+  - `x` (number) - Horizontal offset in pixels. Negative values move left, positive values move right. Default: 0
+  - `y` (number) - Vertical offset in pixels. Negative values move up, positive values move down. Default: 0
+</ParamField>
+
+<ParamField path="duration" type="number" default="500">
+  Duration of the move animation in milliseconds. Set to 0 for instant movement.
+</ParamField>
+
+## Examples
+
+### Move to Center
+
+Move cursor to the center of an element:
+
+```json
+{
+  "action": "moveTo",
+  "selector": "#searchInput"
+}
+```
+
+### Move to Edge
+
+Move to the left edge of an element:
+
+```json
+{
+  "action": "moveTo",
+  "selector": "#searchInput",
+  "alignment": "left"
+}
+```
+
+### Move with Offset
+
+Move to a position with precise offset:
+
+```json
+{
+  "action": "moveTo",
+  "selector": "#searchInput",
+  "alignment": "left",
+  "offset": {
+    "x": 10,
+    "y": 10
+  }
+}
+```
+
+### Slow Animation
+
+Move with a slower animation:
+
+```json
+{
+  "action": "moveTo",
+  "selector": "#searchInput",
+  "alignment": "left",
+  "offset": {
+    "x": 10,
+    "y": 10
+  },
+  "duration": 1000
+}
+```
+
+### Instant Movement
+
+Move instantly without animation:
+
+```json
+{
+  "action": "moveTo",
+  "selector": "#tooltip-trigger",
+  "duration": 0
+}
+```
+
+## Real-World Example
+
+Test a tooltip that appears on hover:
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://example.com/dashboard"
+        },
+        {
+          "action": "moveTo",
+          "selector": ".info-icon",
+          "duration": 500
+        },
+        {
+          "action": "find",
+          "selector": ".tooltip",
+          "timeout": 2000
+        }
+      ]
+    }
+  ]
+}
+```
+
+## How It Works
+
+The `moveTo` action:
+
+1. Locates the element using the provided selector
+2. Calculates the element's position and dimensions
+3. Determines the target coordinates based on alignment and offset
+4. Animates the cursor movement over the specified duration
+5. Updates the visible cursor position (if cursor visualization is enabled)
+
+<Note>
+  This action requires that the element exists and is visible on the page. If the element is not in view, it will be scrolled into view first.
+</Note>
+
+## Alignment Reference
+
+The alignment parameter determines where on the element the cursor moves to:
+
+```
+     top
+      |
+left--+--right
+      |
+    bottom
+```
+
+- **center**: Middle of the element (default)
+- **top**: Horizontal center, top edge
+- **bottom**: Horizontal center, bottom edge
+- **left**: Vertical center, left edge
+- **right**: Vertical center, right edge
+
+## Offset Behavior
+
+Offsets are applied after alignment:
+
+- Positive `x`: Move right from aligned position
+- Negative `x`: Move left from aligned position
+- Positive `y`: Move down from aligned position
+- Negative `y`: Move up from aligned position
+
+## When to Use
+
+Use `moveTo` when:
+- Testing hover effects and tooltips
+- Preparing for precise mouse interactions
+- Testing dropdown menus that appear on hover
+- Verifying cursor-dependent UI behaviors
+- Recording tests with visual cursor indicators
+
+## Error Handling
+
+The action fails when:
+- Element is not found
+- Element exists but cannot be located (no position/size)
+- Mouse movement operation fails
+
+## Related Actions
+
+- [find](/actions/find) - Find elements with waiting
+- [click](/actions/click) - Click after moving to position
+- [dragAndDrop](/actions/dragAndDrop) - Drag elements between positions
+- [scroll](/actions/scroll) - Scroll the page

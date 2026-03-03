@@ -1,0 +1,383 @@
+---
+title: readFile()
+description: Read and parse content from remote URLs or local file paths
+---
+
+The `readFile()` function reads and parses content from remote URLs or local file paths, automatically handling JSON and YAML formats. It's used internally by Doc Detective to load test specifications and configuration files.
+
+## Function Signature
+
+```typescript
+async function readFile({
+  fileURLOrPath
+}: {
+  fileURLOrPath: string
+}): Promise<object | string | null>
+```
+
+## Parameters
+
+<ParamField path="fileURLOrPath" type="string" required>
+  The URL or local file path to read. Supports:
+  - **Remote URLs** - `http://` or `https://` URLs
+  - **Local paths** - Absolute or relative file paths
+  - **File formats** - `.json`, `.yaml`, `.yml`, or any text format
+</ParamField>
+
+## Return Value
+
+<ResponseField name="content" type="object | string | null">
+  The file content, parsed or raw depending on file extension:
+  - **JSON files** (`.json`) - Returns parsed object
+  - **YAML files** (`.yaml`, `.yml`) - Returns parsed object
+  - **Other files** - Returns raw string content
+  - **Errors** - Returns `null` if reading fails
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { readFile } = require('doc-detective');
+
+// Read local JSON file
+const config = await readFile({ 
+  fileURLOrPath: './config.json' 
+});
+
+console.log('Config:', config);
+
+// Read remote YAML file
+const spec = await readFile({ 
+  fileURLOrPath: 'https://example.com/tests.yaml' 
+});
+
+console.log('Spec:', spec);
+
+// Read text file
+const readme = await readFile({ 
+  fileURLOrPath: './README.md' 
+});
+
+console.log('Readme length:', readme.length);
+```
+
+```typescript TypeScript
+import { readFile } from 'doc-detective';
+
+// Read local JSON file
+const config: any = await readFile({ 
+  fileURLOrPath: './config.json' 
+});
+
+console.log('Config:', config);
+
+// Read remote YAML file
+const spec: any = await readFile({ 
+  fileURLOrPath: 'https://example.com/tests.yaml' 
+});
+
+console.log('Spec:', spec);
+
+// Read text file
+const readme: string | null = await readFile({ 
+  fileURLOrPath: './README.md' 
+});
+
+if (readme) {
+  console.log('Readme length:', readme.length);
+}
+```
+</CodeGroup>
+
+## Reading JSON Files
+
+Read and parse JSON configuration:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const config = await readFile({ 
+  fileURLOrPath: './doc-detective.json' 
+});
+
+if (config) {
+  console.log('Input paths:', config.input);
+  console.log('File types:', config.fileTypes);
+} else {
+  console.error('Failed to read config file');
+}
+```
+
+## Reading YAML Files
+
+Read and parse YAML specifications:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const spec = await readFile({ 
+  fileURLOrPath: './tests/spec.yaml' 
+});
+
+if (spec) {
+  console.log(`Spec has ${spec.tests.length} tests`);
+  
+  for (const test of spec.tests) {
+    console.log(`  - ${test.id}: ${test.steps.length} steps`);
+  }
+}
+```
+
+## Reading Remote Files
+
+Fetch and parse files from remote URLs:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const remoteSpec = await readFile({ 
+  fileURLOrPath: 'https://raw.githubusercontent.com/org/repo/main/spec.json'
+});
+
+if (remoteSpec) {
+  console.log('Successfully loaded remote spec');
+  console.log('Spec ID:', remoteSpec.specId);
+} else {
+  console.error('Failed to fetch remote file');
+}
+```
+
+## Reading Text Files
+
+Read plain text or markdown files:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const markdown = await readFile({ 
+  fileURLOrPath: './docs/guide.md' 
+});
+
+if (markdown) {
+  console.log('File size:', markdown.length, 'characters');
+  
+  // Count code blocks
+  const codeBlocks = (markdown.match(/```/g) || []).length / 2;
+  console.log('Code blocks:', codeBlocks);
+}
+```
+
+## Error Handling
+
+Handle missing files and parse errors gracefully:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const content = await readFile({ 
+  fileURLOrPath: './might-not-exist.json' 
+});
+
+if (content === null) {
+  console.error('File not found or could not be read');
+  // Use default configuration or handle error
+  content = { default: true };
+}
+
+console.log('Using configuration:', content);
+```
+
+## Reading with Absolute Paths
+
+Use absolute paths for reliability:
+
+```javascript
+const { readFile } = require('doc-detective');
+const path = require('path');
+
+const absolutePath = path.resolve(__dirname, 'config.json');
+const config = await readFile({ 
+  fileURLOrPath: absolutePath 
+});
+
+if (config) {
+  console.log('Loaded config from:', absolutePath);
+}
+```
+
+## Handling Parse Errors
+
+JSON/YAML parse errors return raw content:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+// If this JSON is malformed, it returns as string
+const content = await readFile({ 
+  fileURLOrPath: './malformed.json' 
+});
+
+if (typeof content === 'string') {
+  console.warn('File could not be parsed as JSON, got raw string');
+  
+  // Try to fix and parse manually
+  try {
+    const fixed = content.replace(/,\s*}/, '}');
+    const parsed = JSON.parse(fixed);
+    console.log('Successfully parsed after fixing:', parsed);
+  } catch (error) {
+    console.error('Could not parse file:', error.message);
+  }
+} else {
+  console.log('File parsed successfully:', content);
+}
+```
+
+## Loading Multiple Files
+
+Read multiple files in parallel:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const files = [
+  './config.json',
+  './tests/spec1.yaml',
+  './tests/spec2.yaml'
+];
+
+const contents = await Promise.all(
+  files.map(file => readFile({ fileURLOrPath: file }))
+);
+
+contents.forEach((content, index) => {
+  if (content) {
+    console.log(`✓ Loaded ${files[index]}`);
+  } else {
+    console.error(`✗ Failed to load ${files[index]}`);
+  }
+});
+```
+
+## Validating File Existence
+
+Check if file was read successfully:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+async function loadConfig(path) {
+  const config = await readFile({ fileURLOrPath: path });
+  
+  if (!config) {
+    throw new Error(`Configuration file not found: ${path}`);
+  }
+  
+  // Validate required properties
+  if (!config.input) {
+    throw new Error('Config must have "input" property');
+  }
+  
+  return config;
+}
+
+try {
+  const config = await loadConfig('./doc-detective.json');
+  console.log('Valid config loaded:', config);
+} catch (error) {
+  console.error('Config error:', error.message);
+  process.exit(1);
+}
+```
+
+## Reading from Environment Variables
+
+Use environment variables for file paths:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+const configPath = process.env.DOC_DETECTIVE_CONFIG || './doc-detective.json';
+
+const config = await readFile({ fileURLOrPath: configPath });
+
+if (config) {
+  console.log(`Loaded config from: ${configPath}`);
+} else {
+  console.error(`Failed to load config from: ${configPath}`);
+  process.exit(1);
+}
+```
+
+## Behavior
+
+The `readFile()` function performs the following steps:
+
+1. **Parameter Validation** - Throws error if `fileURLOrPath` is missing, not a string, or empty
+2. **URL Detection** - Checks if input is a URL (starts with `http://` or `https://`)
+3. **Remote Fetch** - If URL, fetches content via HTTP GET request
+4. **Local Read** - If file path, reads from filesystem using `fs.promises.readFile()`
+5. **Extension Detection** - Determines file type by extension (`.json`, `.yaml`, `.yml`)
+6. **Parsing** - Attempts to parse JSON or YAML files
+7. **Fallback** - Returns raw string if parsing fails
+8. **Error Handling** - Returns `null` on read errors, logs warning to console
+
+## Error Messages
+
+The function logs warnings for common errors:
+
+- **File not found** - `File not found: <path>`
+- **Remote error** - `Error reading remote file from <url>: <message>`
+- **Read error** - `Error reading file: <message>`
+- **Parse error** - `Failed to parse JSON: <message>` or `Failed to parse YAML: <message>`
+
+## Notes
+
+- The function throws errors for invalid parameters but returns `null` for file/network errors
+- Parse errors for JSON/YAML files return the raw string content instead of `null`
+- Remote files are fetched using the axios library
+- Local files are read with UTF-8 encoding
+- File extension detection is case-insensitive
+- The function uses `console.warn()` for error logging (not configurable)
+- YAML parsing supports both `.yaml` and `.yml` extensions
+- Parse errors are logged but don't throw exceptions
+
+## Parameter Errors
+
+The function throws errors for invalid parameters:
+
+```javascript
+const { readFile } = require('doc-detective');
+
+try {
+  // Error: fileURLOrPath is required
+  await readFile({ fileURLOrPath: '' });
+} catch (error) {
+  console.error(error.message);
+  // "fileURLOrPath cannot be an empty string"
+}
+
+try {
+  // Error: fileURLOrPath must be string
+  await readFile({ fileURLOrPath: 123 });
+} catch (error) {
+  console.error(error.message);
+  // "fileURLOrPath must be a string"
+}
+
+try {
+  // Error: fileURLOrPath required
+  await readFile({});
+} catch (error) {
+  console.error(error.message);
+  // "fileURLOrPath is required"
+}
+```
+
+## See Also
+
+- [resolvePaths()](/api/resolvePaths) - Convert relative paths to absolute paths
+- [detectTests()](/api/detectTests) - Detect tests from files
+- [Config schema](https://doc-detective.com/docs/references/schemas/config.html) - Configuration file format
+- [Spec schema](https://doc-detective.com/docs/references/schemas/spec.html) - Test specification format

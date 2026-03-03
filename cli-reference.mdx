@@ -1,0 +1,564 @@
+---
+title: CLI Reference
+description: Complete reference for Doc Detective's command-line interface including all flags, options, and usage examples
+---
+
+Doc Detective provides a command-line interface for running documentation tests directly from your terminal. The CLI is the primary way to integrate Doc Detective into your development workflow and CI/CD pipelines.
+
+## Basic Usage
+
+Run Doc Detective with default settings:
+
+```bash
+npx doc-detective
+```
+
+This will look for tests in the current directory using default configuration.
+
+## CLI Commands
+
+The primary command is `doc-detective` which runs tests based on your configuration.
+
+```bash
+doc-detective [options]
+```
+
+<Note>
+When installed globally with `npm i -g doc-detective`, you can use `doc-detective` directly. Otherwise, use `npx doc-detective`.
+</Note>
+
+## Command-Line Flags
+
+### Configuration
+
+<ParamField path="--config" type="string">
+  Path to a configuration file. Accepts JSON or YAML format.
+
+  **Alias:** `-c`
+
+  ```bash
+  doc-detective --config .doc-detective.json
+  doc-detective -c custom-config.yaml
+  ```
+
+  If not specified, Doc Detective looks for configuration files in this order:
+  1. `.doc-detective.json`
+  2. `.doc-detective.yaml`
+  3. `.doc-detective.yml`
+
+  See [configuration guide](/guides/configuration) for details on config file structure.
+</ParamField>
+
+### Input and Output
+
+<ParamField path="--input" type="string">
+  Path to test specifications and documentation source files. May be paths to specific files or directories to scan for files.
+
+  **Alias:** `-i`
+
+  ```bash
+  # Single file
+  doc-detective --input tests/my-test.spec.json
+
+  # Multiple files (comma-separated)
+  doc-detective --input test1.spec.json,test2.spec.json
+
+  # Directory
+  doc-detective --input ./docs
+
+  # Multiple directories
+  doc-detective -i ./docs,./tests,./examples
+  ```
+
+  Supports:
+  - Local file paths (relative or absolute)
+  - Local directory paths
+  - URLs (e.g., `https://example.com/test.md`)
+  - Comma-separated list of any combination
+
+  <Tip>
+  URL inputs are useful for testing public documentation without downloading files first.
+  </Tip>
+</ParamField>
+
+<ParamField path="--output" type="string">
+  Path of the directory in which to store the output of Doc Detective commands.
+
+  **Alias:** `-o`
+
+  ```bash
+  doc-detective --output ./test-results
+  doc-detective -o /tmp/doc-detective-results
+  ```
+
+  Output files include:
+  - JSON results file with detailed test outcomes
+  - Screenshots (if `screenshot` actions are used)
+  - Recordings (if `record` actions are used)
+
+  If not specified, output is written to the current directory.
+</ParamField>
+
+### Logging
+
+<ParamField path="--logLevel" type="string" default="info">
+  Detail level of logging events. Controls how much information is displayed during test execution.
+
+  **Alias:** `-l`
+
+  **Accepted values:**
+  - `silent` - No output
+  - `error` - Only errors
+  - `warning` - Errors and warnings
+  - `info` - Errors, warnings, and informational messages (default)
+  - `debug` - All messages including detailed debugging information
+
+  ```bash
+  # Minimal output
+  doc-detective --logLevel silent
+
+  # Verbose debugging
+  doc-detective -l debug
+
+  # Production-friendly output
+  doc-detective --logLevel error
+  ```
+
+  <Warning>
+  `debug` mode can produce very verbose output. Use it for troubleshooting specific issues.
+  </Warning>
+</ParamField>
+
+### Security
+
+<ParamField path="--allow-unsafe" type="boolean" default="false">
+  Allow execution of potentially unsafe tests. Required for running `runShell` and `runCode` actions.
+
+  **No short alias**
+
+  ```bash
+  doc-detective --allow-unsafe
+  ```
+
+  This flag must be explicitly set to run tests that execute arbitrary code or shell commands. This is a security measure to prevent unintended code execution.
+
+  <Warning>
+  Only use `--allow-unsafe` with trusted test files. Malicious tests could execute harmful commands on your system.
+  </Warning>
+
+  Actions that require this flag:
+  - `runShell` - Execute shell commands
+  - `runCode` - Execute arbitrary code
+
+  Example test requiring `--allow-unsafe`:
+  ```json
+  {
+    "tests": [
+      {
+        "steps": [
+          {
+            "action": "runShell",
+            "command": "npm install"
+          }
+        ]
+      }
+    ]
+  }
+  ```
+</ParamField>
+
+### Help and Version
+
+<ParamField path="--help" type="boolean">
+  Display help information including all available flags and their descriptions.
+
+  **Alias:** `-h`
+
+  ```bash
+  doc-detective --help
+  doc-detective -h
+  ```
+
+  Displays:
+  - Available command-line flags
+  - Flag aliases
+  - Brief descriptions
+  - Version information
+</ParamField>
+
+<ParamField path="--version" type="boolean">
+  Display the current version of Doc Detective and its dependencies.
+
+  **No short alias**
+
+  ```bash
+  doc-detective --version
+  ```
+
+  Shows:
+  - Main package version
+  - Node.js version
+  - Platform information
+  - Execution method (npm, npx, or direct)
+</ParamField>
+
+## Usage Examples
+
+### Basic Test Execution
+
+Run tests in a specific directory:
+
+```bash
+doc-detective --input ./docs
+```
+
+Run a single test file:
+
+```bash
+doc-detective --input test.spec.json
+```
+
+### Using Configuration Files
+
+Run with a custom config file:
+
+```bash
+doc-detective --config .doc-detective.ci.json
+```
+
+Override config values with CLI arguments:
+
+```bash
+doc-detective --config .doc-detective.json --input ./api-docs --output ./results
+```
+
+### Multiple Input Sources
+
+Test multiple directories:
+
+```bash
+doc-detective --input ./docs,./tutorials,./examples
+```
+
+Test local and remote files:
+
+```bash
+doc-detective --input ./local-docs,https://example.com/doc.md
+```
+
+### Logging Control
+
+Silent mode (CI/CD pipelines):
+
+```bash
+doc-detective --input ./docs --logLevel silent
+```
+
+Debug mode (troubleshooting):
+
+```bash
+doc-detective --input ./docs --logLevel debug --output ./debug-results
+```
+
+### Unsafe Operations
+
+Run tests with shell commands:
+
+```bash
+doc-detective --input setup-test.spec.json --allow-unsafe
+```
+
+### Complete Example
+
+Full CLI command with all major options:
+
+```bash
+doc-detective \
+  --config .doc-detective.json \
+  --input ./docs,./api-reference \
+  --output ./test-results \
+  --logLevel info \
+  --allow-unsafe
+```
+
+## Exit Codes
+
+Doc Detective uses standard exit codes to indicate test results:
+
+<ResponseField name="0" type="Success">
+  All tests passed successfully. No failures or errors were encountered.
+
+  ```bash
+  doc-detective --input ./docs
+  echo $?  # Prints: 0
+  ```
+</ResponseField>
+
+<ResponseField name="1" type="Failure">
+  One or more tests failed, or an error occurred during execution.
+
+  Common failure scenarios:
+  - Test steps failed (e.g., element not found, assertion failed)
+  - Configuration errors (invalid config file)
+  - Missing required dependencies
+  - Invalid command-line arguments
+  - File not found errors
+
+  ```bash
+  doc-detective --input ./docs
+  echo $?  # Prints: 1 if tests failed
+  ```
+
+  Use exit codes in scripts:
+  ```bash
+  if doc-detective --input ./docs; then
+    echo "Tests passed!"
+  else
+    echo "Tests failed!"
+    exit 1
+  fi
+  ```
+</ResponseField>
+
+## Environment Variables
+
+Doc Detective supports environment variables for advanced configuration:
+
+### DOC_DETECTIVE_CONFIG
+
+Override configuration with environment variable:
+
+```bash
+export DOC_DETECTIVE_CONFIG='{"logLevel":"debug","recursive":true}'
+doc-detective --input ./docs
+```
+
+The environment variable accepts a JSON string with any valid config properties. Values from this variable take precedence over config files but can be overridden by command-line arguments.
+
+### DOC_DETECTIVE_API
+
+Configure API integration for remote test execution:
+
+```bash
+export DOC_DETECTIVE_API='{"accountId":"...","url":"...","token":"...","contextIds":[...]}'
+doc-detective
+```
+
+This is used for integration with the Doc Detective Orchestration API. Contact Doc Detective for API access.
+
+### DOC_DETECTIVE_META
+
+Set custom metadata for telemetry:
+
+```bash
+export DOC_DETECTIVE_META='{"dist_deployment":"docker","dist_interface":"ci"}'
+doc-detective --input ./docs
+```
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Test Documentation
+
+on: [push, pull_request]
+
+jobs:
+  test-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      
+      - name: Run Doc Detective
+        run: |
+          npx doc-detective \
+            --input ./docs \
+            --output ./test-results \
+            --logLevel info
+      
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: ./test-results
+```
+
+### GitLab CI
+
+```yaml
+test-docs:
+  image: node:20
+  script:
+    - npx doc-detective --input ./docs --output ./test-results
+  artifacts:
+    when: always
+    paths:
+      - test-results/
+    reports:
+      junit: test-results/*.json
+```
+
+### Jenkins
+
+```groovy
+pipeline {
+  agent {
+    docker {
+      image 'node:20'
+    }
+  }
+  stages {
+    stage('Test Docs') {
+      steps {
+        sh 'npx doc-detective --input ./docs --output ./test-results'
+      }
+    }
+  }
+  post {
+    always {
+      archiveArtifacts artifacts: 'test-results/**/*', fingerprint: true
+    }
+  }
+}
+```
+
+## Configuration Precedence
+
+When the same option is specified in multiple places, Doc Detective uses this precedence (highest to lowest):
+
+1. **Command-line arguments** - `--input ./docs`
+2. **Environment variables** - `DOC_DETECTIVE_CONFIG`
+3. **Config file** - `.doc-detective.json`
+4. **Default values**
+
+Example:
+
+```json .doc-detective.json
+{
+  "input": "./default-docs",
+  "logLevel": "info"
+}
+```
+
+```bash
+# Command-line overrides config file
+doc-detective --input ./custom-docs --logLevel debug
+
+# Result: Uses ./custom-docs and debug logging
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found">
+    **Problem:** `doc-detective: command not found`
+
+    **Solutions:**
+    - Use `npx doc-detective` if not installed globally
+    - Install globally: `npm i -g doc-detective`
+    - Check Node.js is installed: `node --version`
+  </Accordion>
+
+  <Accordion title="Config file not found">
+    **Problem:** `Error reading config file`
+
+    **Solutions:**
+    - Verify file path is correct
+    - Check file has proper extension (`.json`, `.yaml`, `.yml`)
+    - Validate JSON/YAML syntax
+    - Use absolute path: `--config /full/path/to/config.json`
+  </Accordion>
+
+  <Accordion title="Tests not running">
+    **Problem:** "No tests found" or empty results
+
+    **Solutions:**
+    - Verify `--input` path is correct
+    - Check file extensions match `fileTypes` in config
+    - Use `--logLevel debug` to see file detection
+    - Ensure test files have valid test structure
+  </Accordion>
+
+  <Accordion title="Permission denied errors">
+    **Problem:** `EACCES` or permission errors
+
+    **Solutions:**
+    - Check file/directory permissions
+    - Use `--output` to specify writable directory
+    - On Linux/Mac: Avoid using `sudo` with npm
+  </Accordion>
+
+  <Accordion title="Unsafe action blocked">
+    **Problem:** `runShell` or `runCode` actions are skipped
+
+    **Solutions:**
+    - Add `--allow-unsafe` flag
+    - Only use with trusted test files
+    - Review security implications
+  </Accordion>
+
+  <Accordion title="Browser not launching">
+    **Problem:** Tests fail with browser errors
+
+    **Solutions:**
+    - Ensure browser is installed (Chrome/Firefox)
+    - Use `headless: true` in config for CI environments
+    - Check system has display server (on Linux)
+    - Install browser dependencies: `npx @puppeteer/browsers install chrome`
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use config files" icon="file-code">
+    Store configuration in `.doc-detective.json` rather than using many CLI flags. This makes commands shorter and more maintainable.
+  </Card>
+
+  <Card title="Version control configs" icon="code-branch">
+    Commit your config files to version control so all team members use consistent settings.
+  </Card>
+
+  <Card title="Separate CI configs" icon="server">
+    Create separate config files for CI/CD environments (e.g., `.doc-detective.ci.json`) with appropriate settings like `headless: true`.
+  </Card>
+
+  <Card title="Use exit codes" icon="terminal">
+    Check exit codes in scripts to determine test success or failure programmatically.
+  </Card>
+
+  <Card title="Control output location" icon="folder">
+    Always use `--output` in CI/CD to store results in a predictable location for artifact collection.
+  </Card>
+
+  <Card title="Adjust log levels" icon="filter">
+    Use `info` or `error` log levels in production, and `debug` only for troubleshooting specific issues.
+  </Card>
+</CardGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" href="/guides/configuration" icon="gear">
+    Learn about all configuration options
+  </Card>
+  
+  <Card title="Writing Tests" href="/guides/writing-tests" icon="file-code">
+    Create test specifications
+  </Card>
+  
+  <Card title="CI/CD Integration" href="/guides/ci-cd" icon="robot">
+    Integrate Doc Detective into your pipeline
+  </Card>
+  
+  <Card title="API Reference" href="/api/overview" icon="code">
+    Use Doc Detective programmatically
+  </Card>
+</CardGroup>
