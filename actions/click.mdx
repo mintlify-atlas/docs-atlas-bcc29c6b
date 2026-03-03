@@ -1,0 +1,203 @@
+---
+title: click
+description: Click or tap on page elements
+---
+
+The `click` action performs click or tap interactions on page elements. It supports multiple element finding strategies and different types of clicks (left, right, middle).
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple (String)
+{
+  "action": "click",
+  "selector": "#submit-button"
+}
+```
+
+```json By Text
+{
+  "action": "click",
+  "elementText": "Submit"
+}
+```
+
+```json Detailed
+{
+  "action": "click",
+  "selector": "button",
+  "elementText": "Submit",
+  "button": "left"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+### Element Finding
+
+At least one of these parameters is required to identify the element:
+
+<ParamField path="selector" type="string">
+  CSS selector of the element to click.
+</ParamField>
+
+<ParamField path="elementText" type="string">
+  Display text of the element. If combined with other finding fields, the element must match all criteria.
+</ParamField>
+
+<ParamField path="elementId" type="string">
+  ID attribute of the element. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementTestId" type="string">
+  `data-testid` attribute of the element. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementClass" type="string | string[]">
+  Class or array of classes that the element must have. Each class supports exact match or regex pattern using `/pattern/` syntax. Element must have all specified classes.
+</ParamField>
+
+<ParamField path="elementAttribute" type="object">
+  Object of attribute key-value pairs that the element must have. Values can be strings (supporting `/pattern/` regex), numbers, or booleans. Boolean `true` matches attribute presence, `false` matches absence.
+</ParamField>
+
+<ParamField path="elementAria" type="string">
+  Computed accessible name of the element per ARIA specification. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+### Click Options
+
+<ParamField path="button" type="string" default="left">
+  Kind of click to perform.
+  
+  Options: `"left"`, `"right"`, `"middle"`
+</ParamField>
+
+## Examples
+
+### Click by Selector
+
+Click an element using a CSS selector:
+
+```json
+{
+  "action": "click",
+  "selector": "#submit-button"
+}
+```
+
+### Click by Text
+
+Click an element containing specific text:
+
+```json
+{
+  "action": "click",
+  "elementText": "Sign In"
+}
+```
+
+### Right-Click
+
+Perform a right-click (context menu):
+
+```json
+{
+  "action": "click",
+  "selector": ".context-menu-trigger",
+  "button": "right"
+}
+```
+
+### Click with Multiple Criteria
+
+Combine multiple finding strategies for precision:
+
+```json
+{
+  "action": "click",
+  "selector": "button",
+  "elementText": "Submit",
+  "elementClass": ["btn", "btn-primary"]
+}
+```
+
+### Click by ARIA Label
+
+Click using accessible name:
+
+```json
+{
+  "action": "click",
+  "elementAria": "Close dialog"
+}
+```
+
+### Click by Test ID
+
+Use data-testid for stable selectors:
+
+```json
+{
+  "action": "click",
+  "elementTestId": "checkout-btn"
+}
+```
+
+### Click with Attribute Match
+
+Match elements by attributes:
+
+```json
+{
+  "action": "click",
+  "elementAttribute": {
+    "type": "submit",
+    "disabled": false
+  }
+}
+```
+
+## Element Finding Strategy
+
+When multiple finding parameters are specified, the element must match **all** criteria. This allows for very precise element targeting:
+
+```json
+{
+  "action": "click",
+  "selector": "button",
+  "elementText": "Submit",
+  "elementClass": "primary",
+  "elementAttribute": {
+    "type": "submit"
+  }
+}
+```
+
+<Note>
+  If multiple elements match the criteria, the first matching element is clicked.
+</Note>
+
+## Regex Patterns
+
+Several finding parameters support regex patterns using `/pattern/` syntax:
+
+```json
+{
+  "action": "click",
+  "elementText": "/^Submit/",
+  "elementClass": "/btn-.*/"
+}
+```
+
+## When to Use
+
+The `click` action is typically used directly when you know the element exists. For scenarios where you need to wait for an element or perform multiple interactions, consider using the [find](/actions/find) action with its `click` parameter.
+
+## Related Actions
+
+- [find](/actions/find) - Find elements with waiting and optional click/type interactions
+- [type](/actions/type) - Type keys after clicking to focus an element

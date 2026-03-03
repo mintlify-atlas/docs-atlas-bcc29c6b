@@ -1,0 +1,455 @@
+---
+title: screenshot
+description: Capture screenshots of pages or elements in PNG format
+---
+
+The `screenshot` action captures screenshots of web pages or specific elements in PNG format. It includes visual regression testing capabilities by comparing screenshots over time.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple
+{
+  "action": "screenshot",
+  "path": "homepage.png"
+}
+```
+
+```json Capture Element
+{
+  "action": "screenshot",
+  "path": "submit-button.png",
+  "crop": "#submit-btn"
+}
+```
+
+```json With Comparison
+{
+  "action": "screenshot",
+  "path": "dashboard.png",
+  "directory": "screenshots",
+  "maxVariation": 0.05,
+  "overwrite": "aboveVariation"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="path" type="string">
+  File path of the PNG file. If not specified, uses the step ID. Must end in `.png`.
+</ParamField>
+
+<ParamField path="directory" type="string">
+  Directory for the PNG file. If the directory doesn't exist, it's created. If not specified, uses the media directory.
+</ParamField>
+
+<ParamField path="maxVariation" type="number" default="0.05">
+  Allowed variation as a fraction (0 to 1) of pixels between the new screenshot and existing screenshot.
+  
+  For example, `0.05` means 5% of pixels can differ. If difference exceeds this, the step fails.
+</ParamField>
+
+<ParamField path="overwrite" type="string" default="aboveVariation">
+  When to overwrite the existing screenshot.
+  
+  Options:
+  - `"true"` - Always overwrite
+  - `"false"` - Never overwrite (comparison only)
+  - `"aboveVariation"` - Overwrite if variation exceeds `maxVariation`
+</ParamField>
+
+<ParamField path="crop" type="string | object">
+  Crop the screenshot to a specific element. Can be a selector string or an object with element finding parameters.
+</ParamField>
+
+### Crop Object Parameters
+
+<ParamField path="crop.selector" type="string">
+  CSS selector of the element to screenshot.
+</ParamField>
+
+<ParamField path="crop.elementText" type="string">
+  Display text of the element to screenshot.
+</ParamField>
+
+<ParamField path="crop.elementId" type="string">
+  ID attribute of the element. Supports regex using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="crop.elementTestId" type="string">
+  `data-testid` attribute of the element. Supports regex using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="crop.elementClass" type="string | string[]">
+  Class or array of classes that the element must have. Supports regex using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="crop.elementAttribute" type="object">
+  Object of attribute key-value pairs. Values can be strings (supporting `/pattern/` regex), numbers, or booleans.
+</ParamField>
+
+<ParamField path="crop.elementAria" type="string">
+  Computed accessible name per ARIA specification. Supports regex using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="crop.padding" type="number | object">
+  Padding to add around the element bounds. Can be a single number (applied to all sides) or an object with `top`, `right`, `bottom`, `left` properties.
+</ParamField>
+
+## Examples
+
+### Full Page Screenshot
+
+Capture entire viewport:
+
+```json
+{
+  "action": "screenshot",
+  "path": "homepage.png"
+}
+```
+
+### Screenshot with Directory
+
+Organize screenshots:
+
+```json
+{
+  "action": "screenshot",
+  "path": "login-page.png",
+  "directory": "test-results/screenshots"
+}
+```
+
+### Screenshot Single Element
+
+Capture specific element:
+
+```json
+{
+  "action": "screenshot",
+  "path": "navigation.png",
+  "crop": "#main-nav"
+}
+```
+
+### Element with Padding
+
+Add space around element:
+
+```json
+{
+  "action": "screenshot",
+  "path": "button.png",
+  "crop": {
+    "selector": "#submit-btn",
+    "padding": 10
+  }
+}
+```
+
+### Custom Padding Per Side
+
+Different padding for each side:
+
+```json
+{
+  "action": "screenshot",
+  "path": "card.png",
+  "crop": {
+    "selector": ".card",
+    "padding": {
+      "top": 20,
+      "right": 10,
+      "bottom": 20,
+      "left": 10
+    }
+  }
+}
+```
+
+### Visual Regression Testing
+
+Compare against baseline:
+
+```json
+{
+  "action": "screenshot",
+  "path": "dashboard.png",
+  "directory": "screenshots",
+  "maxVariation": 0.02,
+  "overwrite": "aboveVariation"
+}
+```
+
+### Strict Visual Comparison
+
+No variation allowed:
+
+```json
+{
+  "action": "screenshot",
+  "path": "pixel-perfect.png",
+  "maxVariation": 0,
+  "overwrite": "false"
+}
+```
+
+### Always Update Screenshot
+
+Keep latest version:
+
+```json
+{
+  "action": "screenshot",
+  "path": "current-state.png",
+  "overwrite": "true"
+}
+```
+
+### Crop by Element Text
+
+Find element by text:
+
+```json
+{
+  "action": "screenshot",
+  "path": "error-message.png",
+  "crop": {
+    "elementText": "Error: Invalid input",
+    "padding": 5
+  }
+}
+```
+
+### Multiple Element Criteria
+
+Precise element targeting:
+
+```json
+{
+  "action": "screenshot",
+  "path": "submit-btn.png",
+  "crop": {
+    "selector": "button",
+    "elementText": "Submit",
+    "elementClass": ["btn", "btn-primary"],
+    "padding": 10
+  }
+}
+```
+
+### Complete Test Flow
+
+From the samples:
+
+```json
+{
+  "steps": [
+    {
+      "action": "goTo",
+      "url": "https://www.duckduckgo.com"
+    },
+    {
+      "action": "find",
+      "selector": "#searchbox_input",
+      "click": true,
+      "type": {
+        "keys": ["American Shorthair kittens", "$ENTER$"]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "[data-testid='web-vertical']"
+    },
+    {
+      "action": "screenshot",
+      "path": "search-results.png"
+    }
+  ]
+}
+```
+
+## Visual Regression Testing
+
+Screenshots can be used for visual regression testing:
+
+1. **First run**: Screenshot is saved as baseline
+2. **Subsequent runs**: New screenshot is compared to baseline
+3. **If variation ≤ maxVariation**: Test passes
+4. **If variation > maxVariation**: Test fails (unless `overwrite` is `"true"` or `"aboveVariation"`)
+
+### Workflow Example
+
+```json
+{
+  "steps": [
+    {
+      "action": "goTo",
+      "url": "https://app.example.com/dashboard"
+    },
+    {
+      "action": "screenshot",
+      "path": "dashboard-baseline.png",
+      "directory": "visual-tests",
+      "maxVariation": 0.05,
+      "overwrite": "aboveVariation"
+    }
+  ]
+}
+```
+
+**First run**: Creates `visual-tests/dashboard-baseline.png`
+
+**Second run**: 
+- Compares new screenshot to baseline
+- If < 5% different: Pass (no update)
+- If > 5% different: Fail and update baseline
+
+## Understanding maxVariation
+
+`maxVariation` is a fraction (0 to 1) representing the percentage of pixels that can differ:
+
+- `0` = No pixels can differ (pixel-perfect)
+- `0.01` = 1% of pixels can differ
+- `0.05` = 5% of pixels can differ (default)
+- `0.1` = 10% of pixels can differ
+- `1` = 100% difference allowed (effectively no comparison)
+
+<Tip>
+  Use `0.01-0.05` for most UI testing. Higher values for pages with dynamic content or animations.
+</Tip>
+
+## Overwrite Strategies
+
+### `"aboveVariation"` (Default)
+Update baseline when changes exceed threshold:
+```json
+{
+  "maxVariation": 0.05,
+  "overwrite": "aboveVariation"
+}
+```
+Use when: Normal development - updates baseline for significant changes
+
+### `"false"` (Comparison Only)
+Never update, always compare:
+```json
+{
+  "maxVariation": 0.02,
+  "overwrite": "false"
+}
+```
+Use when: CI/CD pipelines - prevent accidental baseline updates
+
+### `"true"` (Always Update)
+Always save new screenshot:
+```json
+{
+  "overwrite": "true"
+}
+```
+Use when: Creating/updating baselines, documentation screenshots
+
+## Element Cropping
+
+Crop to capture only relevant parts:
+
+### Simple Selector
+```json
+{
+  "crop": "#submit-button"
+}
+```
+
+### With Padding
+```json
+{
+  "crop": {
+    "selector": "#submit-button",
+    "padding": 20
+  }
+}
+```
+
+### Multiple Criteria
+```json
+{
+  "crop": {
+    "selector": ".modal",
+    "elementText": "Confirm",
+    "elementAttribute": {
+      "data-visible": "true"
+    },
+    "padding": {
+      "top": 10,
+      "right": 10,
+      "bottom": 10,
+      "left": 10
+    }
+  }
+}
+```
+
+## Best Practices
+
+1. **Use meaningful names**: `login-form.png` instead of `screenshot1.png`
+2. **Organize by feature**: Use `directory` to group related screenshots
+3. **Set appropriate variation**: Too strict causes false failures, too loose misses issues
+4. **Wait for stability**: Use `find` or `wait` before screenshot to ensure page is ready
+5. **Crop dynamic content**: Focus on static UI elements for reliable comparisons
+
+<Warning>
+  Screenshots include dynamic content like timestamps, ads, or personalized content. Crop to stable elements or increase `maxVariation` to account for expected changes.
+</Warning>
+
+## Common Issues
+
+### Flaky Screenshot Tests
+
+If screenshots fail intermittently:
+
+1. **Wait for page stability**
+   ```json
+   {
+     "action": "goTo",
+     "url": "https://example.com",
+     "waitUntil": {
+       "networkIdleTime": 1000,
+       "domIdleTime": 1000
+     }
+   }
+   ```
+
+2. **Wait for specific elements**
+   ```json
+   {
+     "action": "find",
+     "selector": "[data-loaded='true']",
+     "timeout": 10000
+   }
+   ```
+
+3. **Increase variation tolerance**
+   ```json
+   {
+     "maxVariation": 0.1
+   }
+   ```
+
+4. **Crop dynamic areas**
+   ```json
+   {
+     "crop": ".static-content"
+   }
+   ```
+
+## Related Actions
+
+- [record](/actions/record) - Capture video recordings
+- [find](/actions/find) - Wait for elements before screenshot
+- [goTo](/actions/goTo) - Navigate with wait conditions
+- [wait](/actions/wait) - Add explicit delays

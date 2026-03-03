@@ -1,0 +1,407 @@
+---
+title: runShell
+description: Execute native shell commands during tests
+---
+
+The `runShell` action executes commands in the system's default shell, allowing you to run scripts, interact with the operating system, and validate command output as part of your tests.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple Command
+{
+  "action": "runShell",
+  "command": "echo Hello, world!"
+}
+```
+
+```json With Arguments
+{
+  "action": "runShell",
+  "command": "docker",
+  "args": ["run", "hello-world"]
+}
+```
+
+```json With Validation
+{
+  "action": "runShell",
+  "command": "docker run hello-world",
+  "exitCodes": [0],
+  "stdio": "Hello from Docker!"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="command" type="string" required>
+  Command to execute in the machine's default shell.
+</ParamField>
+
+<ParamField path="args" type="string[]" default="[]">
+  Arguments for the command. Each argument is a separate array element.
+</ParamField>
+
+<ParamField path="workingDirectory" type="string" default=".">
+  Working directory from which to execute the command.
+</ParamField>
+
+<ParamField path="exitCodes" type="integer[]" default="[0]">
+  Expected exit codes. If the command's actual exit code isn't in this list, the step fails.
+</ParamField>
+
+<ParamField path="stdio" type="string">
+  Content expected in the command's stdout or stderr. If the expected content can't be found, the step fails.
+  
+  Supports strings and regular expressions. Use `/pattern/` syntax for regex.
+</ParamField>
+
+<ParamField path="path" type="string">
+  File path to save the command's output, relative to `directory`.
+</ParamField>
+
+<ParamField path="directory" type="string">
+  Directory to save the command's output. If the directory doesn't exist, it's created. If not specified, uses your media directory.
+</ParamField>
+
+<ParamField path="maxVariation" type="number" default="0">
+  Allowed variation as a fraction (0 to 1) between current output and previously saved output. For example, `0.1` means 10% difference is acceptable.
+  
+  If output doesn't exist at `path`, this value is ignored.
+</ParamField>
+
+<ParamField path="overwrite" type="string" default="aboveVariation">
+  When to overwrite the existing output at `path`.
+  
+  Options: `"true"`, `"false"`, `"aboveVariation"`
+</ParamField>
+
+<ParamField path="timeout" type="integer" default="60000">
+  Maximum time in milliseconds the command is allowed to run. If exceeded, the step fails.
+</ParamField>
+
+## Examples
+
+### Simple Echo Command
+
+Basic command execution:
+
+```json
+{
+  "action": "runShell",
+  "command": "echo",
+  "args": ["Hello from shell!"]
+}
+```
+
+### Run Docker Container
+
+Execute Docker with output validation:
+
+```json
+{
+  "action": "runShell",
+  "command": "docker run hello-world",
+  "timeout": 20000,
+  "exitCodes": [0],
+  "stdio": "Hello from Docker!"
+}
+```
+
+### Use Environment Variables
+
+Reference loaded variables:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "runShell",
+      "command": "echo",
+      "args": ["$USER"]
+    }
+  ]
+}
+```
+
+### Expect Specific Exit Code
+
+Test commands that fail intentionally:
+
+```json
+{
+  "action": "runShell",
+  "command": "false",
+  "exitCodes": [1]
+}
+```
+
+### Validate Output with Regex
+
+Match output using regular expressions:
+
+```json
+{
+  "action": "runShell",
+  "command": "echo",
+  "args": ["setup-complete-12345"],
+  "stdio": "/setup-complete-\\d+/"
+}
+```
+
+### Save Command Output
+
+Capture output to a file:
+
+```json
+{
+  "action": "runShell",
+  "command": "docker run hello-world",
+  "path": "docker-output.txt",
+  "directory": "test-results"
+}
+```
+
+### Compare Output Over Time
+
+Save output and detect changes:
+
+```json
+{
+  "action": "runShell",
+  "command": "npm list --depth=0",
+  "path": "dependencies.txt",
+  "directory": "snapshots",
+  "maxVariation": 0.1,
+  "overwrite": "aboveVariation"
+}
+```
+
+### Run Script with Working Directory
+
+Execute from specific directory:
+
+```json
+{
+  "action": "runShell",
+  "command": "npm",
+  "args": ["test"],
+  "workingDirectory": "./my-project",
+  "timeout": 120000
+}
+```
+
+### Complete Example from Samples
+
+Docker test with validation:
+
+```json
+{
+  "action": "runShell",
+  "command": "docker run hello-world",
+  "workingDirectory": ".",
+  "exitCodes": [0],
+  "stdio": "Hello from Docker!",
+  "path": "docker-output.txt",
+  "directory": "output",
+  "maxVariation": 0.1,
+  "overwrite": "aboveVariation"
+}
+```
+
+## Exit Code Validation
+
+Commands can return different exit codes:
+
+- `0` - Success (default expectation)
+- Non-zero - Error or specific status
+
+Test both success and failure scenarios:
+
+```json
+{
+  "steps": [
+    {
+      "action": "runShell",
+      "command": "test -f ./config.json",
+      "exitCodes": [0]
+    },
+    {
+      "action": "runShell",
+      "command": "test -f ./nonexistent.json",
+      "exitCodes": [1]
+    }
+  ]
+}
+```
+
+## Output Validation
+
+The `stdio` parameter checks both stdout and stderr:
+
+### Exact String Match
+```json
+{
+  "stdio": "exact text to find"
+}
+```
+
+### Regex Pattern
+```json
+{
+  "stdio": "/pattern.*/"
+}
+```
+
+### Case-Insensitive Regex
+```json
+{
+  "stdio": "/hello/i"
+}
+```
+
+<Note>
+  The action succeeds if the expected content is found in **either** stdout or stderr.
+</Note>
+
+## Output Comparison
+
+When `path` is specified, output is saved and can be compared on subsequent runs:
+
+1. **First run**: Output saved, no comparison
+2. **Subsequent runs**: Current output compared to saved output
+3. **If variation > maxVariation**: Step fails (unless `overwrite` allows)
+
+```json
+{
+  "action": "runShell",
+  "command": "git status --short",
+  "path": "git-status.txt",
+  "maxVariation": 0,
+  "overwrite": "false"
+}
+```
+
+This example fails if git status changes between runs.
+
+## Overwrite Modes
+
+- `"true"` - Always overwrite saved output
+- `"false"` - Never overwrite (comparison only)
+- `"aboveVariation"` - Overwrite only when variation exceeds `maxVariation` (default)
+
+## Common Use Cases
+
+### Setup and Teardown
+
+Prepare test environment:
+
+```json
+{
+  "steps": [
+    {
+      "action": "runShell",
+      "command": "docker-compose up -d"
+    },
+    // ... other test steps ...
+    {
+      "action": "runShell",
+      "command": "docker-compose down"
+    }
+  ]
+}
+```
+
+### Database Operations
+
+Run database commands:
+
+```json
+{
+  "action": "runShell",
+  "command": "psql",
+  "args": [
+    "-h", "localhost",
+    "-U", "$DB_USER",
+    "-c", "SELECT version();"
+  ]
+}
+```
+
+### File System Checks
+
+Verify files exist:
+
+```json
+{
+  "action": "runShell",
+  "command": "ls",
+  "args": ["-la", "./dist"],
+  "stdio": "index.html"
+}
+```
+
+### API Testing with cURL
+
+Test endpoints:
+
+```json
+{
+  "action": "runShell",
+  "command": "curl",
+  "args": [
+    "-s",
+    "https://api.example.com/health"
+  ],
+  "stdio": "\"status\":\"healthy\""
+}
+```
+
+<Tip>
+  For HTTP requests, consider using the [httpRequest](/actions/httpRequest) action instead, which provides better validation and response handling.
+</Tip>
+
+## Security Considerations
+
+<Warning>
+  Shell commands execute with the same permissions as Doc Detective. Be cautious with:
+  - User input in commands
+  - Commands that modify system state
+  - Secrets in command arguments (use environment variables)
+</Warning>
+
+Safe pattern:
+```json
+{
+  "steps": [
+    { "action": "loadVariables", "path": ".env" },
+    {
+      "action": "runShell",
+      "command": "mysql",
+      "args": ["-u", "$DB_USER", "-p$DB_PASS"]
+    }
+  ]
+}
+```
+
+## Platform Differences
+
+Shell commands may differ across platforms:
+
+- **Windows**: Uses `cmd.exe` or PowerShell
+- **Linux/Mac**: Uses `bash` or `sh`
+
+Write platform-specific tests or use cross-platform commands.
+
+## Related Actions
+
+- [runCode](/actions/runCode) - Execute code in Python, JavaScript, or Bash
+- [loadVariables](/actions/loadVariables) - Load environment variables
+- [httpRequest](/actions/httpRequest) - Test HTTP endpoints

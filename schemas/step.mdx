@@ -1,0 +1,546 @@
+---
+title: Step Schema
+description: Actions to perform in a Doc Detective test
+---
+
+A step defines a single action to perform in a test. Doc Detective supports many different step types, from simple actions like navigating to a URL to complex operations like running shell commands or making HTTP requests.
+
+## Common Properties
+
+All steps share these common properties:
+
+<ParamField path="$schema" type="string">
+  JSON Schema reference for this object.
+  
+  **Value:** `https://raw.githubusercontent.com/doc-detective/common/refs/heads/main/dist/schemas/step_v3.schema.json`
+</ParamField>
+
+<ParamField path="stepId" type="string">
+  Unique identifier for the step. Auto-generated if not provided.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Human-readable description of what this step does.
+</ParamField>
+
+<ParamField path="unsafe" type="boolean" default={false}>
+  Whether or not the step may be unsafe. Unsafe steps may perform actions that could modify the system or environment in unexpected ways. Unsafe steps are only performed within Docker containers or if unsafe steps are enabled with the `allowUnsafeSteps` config property or the `--allow-unsafe` flag.
+</ParamField>
+
+<ParamField path="outputs" type="object" default={{}}>
+  Outputs from step processes and user-defined expressions. Use the `outputs` object to reference outputs in subsequent steps. If a user-defined output matches the key for a step-defined output, the user-defined output takes precedence.
+  
+  Keys must match the pattern `^[A-Za-z0-9_]+$`.
+  
+  <Expandable title="Example">
+    ```json
+    "outputs": {
+      "userId": "$response.body.id",
+      "userName": "$response.body.name"
+    }
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="variables" type="object" default={{}}>
+  Environment variables to set from user-defined expressions.
+  
+  Keys must match the pattern `^[A-Za-z0-9_]+$`.
+  
+  <Expandable title="Example">
+    ```json
+    "variables": {
+      "API_KEY": "$outputs.apiKey",
+      "USER_ID": "$outputs.userId"
+    }
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="breakpoint" type="boolean" default={false}>
+  Whether or not this step should act as a breakpoint when debugging is enabled. When `true`, execution will pause at this step when debug mode is enabled.
+</ParamField>
+
+## Step Actions
+
+Each step must include exactly one action. Here are the available actions:
+
+### checkLink
+
+Check if an HTTP or HTTPS URL returns an acceptable status code.
+
+<ParamField path="checkLink" type="string | object" required>
+  **String format:** URL to check
+  
+  ```json
+  {
+    "checkLink": "https://www.example.com"
+  }
+  ```
+  
+  **Object format:**
+  
+  <Expandable title="checkLink Object Properties">
+    <ParamField path="url" type="string" required>
+      URL to check. Can be a full URL or a path. If a path is provided, `origin` must be specified.
+    </ParamField>
+    
+    <ParamField path="origin" type="string">
+      Protocol and domain to prepend to `url`.
+    </ParamField>
+    
+    <ParamField path="statusCodes" type="integer | integer[]" default={[200, 301, 302, 307, 308]}>
+      Accepted status codes. If the URL returns a code other than what is specified, the step fails.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "checkLink": {
+      "url": "https://www.example.com",
+      "statusCodes": [200]
+    }
+  }
+  ```
+</ParamField>
+
+### goTo
+
+Navigate to a URL in a browser.
+
+<ParamField path="goTo" type="string | object" required>
+  **String format:** URL to navigate to
+  
+  ```json
+  {
+    "goTo": "https://www.example.com"
+  }
+  ```
+  
+  **Object format:**
+  
+  <Expandable title="goTo Object Properties">
+    <ParamField path="url" type="string" required>
+      URL to navigate to.
+    </ParamField>
+    
+    <ParamField path="origin" type="string">
+      Protocol and domain to prepend to `url`.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "goTo": {
+      "url": "https://www.example.com"
+    }
+  }
+  ```
+</ParamField>
+
+### find
+
+Find an element on a page and optionally interact with it.
+
+<ParamField path="find" type="object" required>
+  <Expandable title="find Properties">
+    <ParamField path="selector" type="string" required>
+      CSS selector to find the element.
+    </ParamField>
+    
+    <ParamField path="elementText" type="string">
+      Text content that the element should contain.
+    </ParamField>
+    
+    <ParamField path="timeout" type="integer" default={10000}>
+      Maximum time to wait for the element in milliseconds.
+    </ParamField>
+    
+    <ParamField path="moveTo" type="boolean" default={false}>
+      If `true`, moves the mouse to the element.
+    </ParamField>
+    
+    <ParamField path="click" type="boolean" default={false}>
+      If `true`, clicks the element.
+    </ParamField>
+    
+    <ParamField path="type" type="object">
+      Type text into the element.
+      
+      <Expandable title="type Properties">
+        <ParamField path="keys" type="string[]" required>
+          Keys to type. Use special keys like `$ENTER$`, `$TAB$`, etc.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "find": {
+      "selector": "#search-input",
+      "click": true,
+      "type": {
+        "keys": ["search query", "$ENTER$"]
+      }
+    }
+  }
+  ```
+</ParamField>
+
+### type
+
+Type keys at the current cursor position.
+
+<ParamField path="type" type="object" required>
+  <Expandable title="type Properties">
+    <ParamField path="keys" type="string[]" required>
+      Keys to type. Use special keys like `$ENTER$`, `$TAB$`, `$BACKSPACE$`, etc.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "type": {
+      "keys": ["text to type", "$ENTER$"]
+    }
+  }
+  ```
+</ParamField>
+
+### click
+
+Click an element or at specific coordinates.
+
+<ParamField path="click" type="object" required>
+  <Expandable title="click Properties">
+    <ParamField path="selector" type="string">
+      CSS selector to find the element to click.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "click": {
+      "selector": "#submit-button"
+    }
+  }
+  ```
+</ParamField>
+
+### wait
+
+Wait for a specified duration or condition.
+
+<ParamField path="wait" type="integer | boolean" required>
+  **Integer:** Wait time in milliseconds
+  
+  **Boolean:** If `true`, waits for a default duration
+  
+  ```json
+  {
+    "wait": 5000
+  }
+  ```
+</ParamField>
+
+### screenshot
+
+Capture a screenshot of the current page or element.
+
+<ParamField path="screenshot" type="string | boolean | object" required>
+  **Boolean:** If `true`, captures a screenshot with auto-generated filename
+  
+  **String:** Path where the screenshot should be saved
+  
+  **Object format:**
+  
+  <Expandable title="screenshot Properties">
+    <ParamField path="path" type="string">
+      Filename for the screenshot.
+    </ParamField>
+    
+    <ParamField path="directory" type="string">
+      Directory where the screenshot should be saved.
+    </ParamField>
+    
+    <ParamField path="maxVariation" type="number" default={0}>
+      Maximum allowed visual difference (0-1) when comparing with an existing screenshot.
+    </ParamField>
+    
+    <ParamField path="overwrite" type="string">
+      When to overwrite existing screenshots.
+      
+      **Options:** `always`, `never`, `aboveVariation`
+    </ParamField>
+    
+    <ParamField path="crop" type="string | object">
+      CSS selector or crop configuration for capturing only part of the page.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "screenshot": {
+      "path": "homepage.png",
+      "directory": "static/images",
+      "maxVariation": 0.1,
+      "overwrite": "aboveVariation"
+    }
+  }
+  ```
+</ParamField>
+
+### httpRequest
+
+Make an HTTP request and validate the response.
+
+<ParamField path="httpRequest" type="object" required>
+  <Expandable title="httpRequest Properties">
+    <ParamField path="method" type="string" required>
+      HTTP method.
+      
+      **Options:** `get`, `post`, `put`, `patch`, `delete`, `head`, `options`
+    </ParamField>
+    
+    <ParamField path="url" type="string" required>
+      URL to send the request to.
+    </ParamField>
+    
+    <ParamField path="request" type="object">
+      Request configuration.
+      
+      <Expandable title="request Properties">
+        <ParamField path="body" type="object">
+          Request body data.
+        </ParamField>
+        
+        <ParamField path="headers" type="object">
+          Request headers.
+        </ParamField>
+        
+        <ParamField path="parameters" type="object">
+          Query parameters or path parameters.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="response" type="object">
+      Expected response to validate against.
+      
+      <Expandable title="response Properties">
+        <ParamField path="body" type="object">
+          Expected response body.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="statusCodes" type="integer | integer[]" default={[200]}>
+      Accepted status codes.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "httpRequest": {
+      "method": "post",
+      "url": "https://api.example.com/users",
+      "request": {
+        "body": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      },
+      "statusCodes": [200, 201]
+    }
+  }
+  ```
+</ParamField>
+
+### runShell
+
+Execute a shell command.
+
+<ParamField path="runShell" type="object" required>
+  <Expandable title="runShell Properties">
+    <ParamField path="command" type="string" required>
+      Command to execute.
+    </ParamField>
+    
+    <ParamField path="args" type="string[]">
+      Command arguments.
+    </ParamField>
+    
+    <ParamField path="workingDirectory" type="string">
+      Directory to execute the command in.
+    </ParamField>
+    
+    <ParamField path="exitCodes" type="integer[]" default={[0]}>
+      Accepted exit codes.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "runShell": {
+      "command": "echo",
+      "args": ["Hello, World!"]
+    }
+  }
+  ```
+</ParamField>
+
+### runCode
+
+Execute code in a specified language.
+
+<ParamField path="runCode" type="object" required>
+  <Expandable title="runCode Properties">
+    <ParamField path="language" type="string" required>
+      Programming language.
+      
+      **Options:** `python`, `javascript`, `typescript`, etc.
+    </ParamField>
+    
+    <ParamField path="code" type="string" required>
+      Code to execute.
+    </ParamField>
+    
+    <ParamField path="workingDirectory" type="string">
+      Directory to execute the code in.
+    </ParamField>
+    
+    <ParamField path="exitCodes" type="integer[]" default={[0]}>
+      Accepted exit codes.
+    </ParamField>
+  </Expandable>
+  
+  ```json
+  {
+    "runCode": {
+      "language": "python",
+      "code": "print('Hello from Python')"
+    }
+  }
+  ```
+</ParamField>
+
+### loadVariables
+
+Load environment variables from a file.
+
+<ParamField path="loadVariables" type="string" required>
+  Path to the `.env` file to load.
+  
+  ```json
+  {
+    "loadVariables": ".env"
+  }
+  ```
+</ParamField>
+
+### record / stopRecord
+
+Start or stop recording browser actions.
+
+<ParamField path="record" type="boolean | object" required>
+  Start recording browser actions.
+  
+  ```json
+  {
+    "record": true
+  }
+  ```
+</ParamField>
+
+<ParamField path="stopRecord" type="boolean" required>
+  Stop recording browser actions.
+  
+  ```json
+  {
+    "stopRecord": true
+  }
+  ```
+</ParamField>
+
+## Examples
+
+### Simple URL Check
+
+```json
+{
+  "checkLink": "https://www.google.com"
+}
+```
+
+### Navigate and Interact
+
+```json
+[
+  {
+    "goTo": "https://www.google.com"
+  },
+  {
+    "find": {
+      "selector": "[name=q]",
+      "click": true,
+      "type": {
+        "keys": ["Doc Detective", "$ENTER$"]
+      }
+    }
+  },
+  {
+    "wait": 2000
+  },
+  {
+    "screenshot": "search-results.png"
+  }
+]
+```
+
+### API Testing
+
+```json
+{
+  "httpRequest": {
+    "method": "post",
+    "url": "https://api.example.com/users",
+    "request": {
+      "body": {
+        "name": "Jane Smith",
+        "role": "admin"
+      },
+      "headers": {
+        "Authorization": "Bearer $API_TOKEN"
+      }
+    },
+    "response": {
+      "body": {
+        "name": "Jane Smith",
+        "role": "admin"
+      }
+    },
+    "statusCodes": [201]
+  },
+  "outputs": {
+    "userId": "$response.body.id"
+  }
+}
+```
+
+### With Common Properties
+
+```json
+{
+  "stepId": "verify-homepage",
+  "description": "Verify the homepage loads correctly",
+  "checkLink": "https://www.google.com",
+  "outputs": {
+    "status": "$response.statusCode"
+  },
+  "variables": {
+    "HOMEPAGE_STATUS": "$outputs.status"
+  },
+  "breakpoint": false
+}
+```

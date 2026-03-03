@@ -1,0 +1,369 @@
+---
+title: runCode
+description: Execute code in Python, JavaScript, or Bash
+---
+
+The `runCode` action allows you to execute code snippets in Python, JavaScript, or Bash as part of your tests. This is useful for custom validation logic, data transformation, or integration with external tools.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json JavaScript
+{
+  "action": "runCode",
+  "language": "javascript",
+  "code": "console.log('Hello from JavaScript!');"
+}
+```
+
+```json Python
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "print('Hello from Python!')"
+}
+```
+
+```json Bash
+{
+  "action": "runCode",
+  "language": "bash",
+  "code": "echo 'Hello from Bash!'"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="language" type="string" required>
+  Language of the code to run.
+  
+  Options: `"python"`, `"javascript"`, `"bash"`
+</ParamField>
+
+<ParamField path="code" type="string" required>
+  Code to execute. Can be a single line or multi-line string.
+</ParamField>
+
+<ParamField path="args" type="string[]" default="[]">
+  Arguments to pass to the code. How arguments are accessed depends on the language.
+</ParamField>
+
+<ParamField path="workingDirectory" type="string" default=".">
+  Working directory from which to run the code.
+</ParamField>
+
+<ParamField path="exitCodes" type="integer[]" default="[0]">
+  Expected exit codes. If the code's actual exit code isn't in this list, the step fails.
+</ParamField>
+
+<ParamField path="stdio" type="string">
+  Content expected in the command's output (stdout or stderr). If the expected content can't be found, the step fails.
+  
+  Supports strings and regular expressions using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="path" type="string">
+  File path to save the code's output, relative to `directory`.
+</ParamField>
+
+<ParamField path="directory" type="string">
+  Directory to save the code's output. If the directory doesn't exist, it's created. If not specified, uses your media directory.
+</ParamField>
+
+<ParamField path="maxVariation" type="number" default="0">
+  Allowed variation as a fraction (0 to 1) between current output and previously saved output.
+  
+  For example, `0.1` means 10% difference is acceptable.
+</ParamField>
+
+<ParamField path="overwrite" type="string" default="aboveVariation">
+  When to overwrite the existing output at `path`.
+  
+  Options: `"true"`, `"false"`, `"aboveVariation"`
+</ParamField>
+
+<ParamField path="timeout" type="integer" default="60000">
+  Maximum time in milliseconds the code is allowed to run. If exceeded, the step fails.
+</ParamField>
+
+## Examples
+
+### JavaScript with Environment Variable
+
+Access environment variables:
+
+```json
+{
+  "action": "runCode",
+  "language": "javascript",
+  "code": "console.log('Hello, ' + process.env.USER + '!');"
+}
+```
+
+### Python with Calculation
+
+Perform computations:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import math\nprint(f'Pi is approximately {math.pi:.2f}')"
+}
+```
+
+### Bash Script
+
+Run bash commands:
+
+```json
+{
+  "action": "runCode",
+  "language": "bash",
+  "code": "docker run hello-world",
+  "timeout": 20000,
+  "exitCodes": [0],
+  "stdio": "Hello from Docker!"
+}
+```
+
+### Validate Output
+
+Check that code produces expected output:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "print('Hello from Python')",
+  "stdio": "Hello from Python"
+}
+```
+
+### Expect Non-Zero Exit
+
+Test error conditions:
+
+```json
+{
+  "action": "runCode",
+  "language": "javascript",
+  "code": "process.exit(1);",
+  "exitCodes": [1]
+}
+```
+
+### Save Output to File
+
+Capture code output:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import sys\nprint(f'Python version: {sys.version}')",
+  "path": "python-version.txt",
+  "directory": "output"
+}
+```
+
+### Multi-line Code
+
+Execute complex logic:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import json\nimport os\n\nconfig = {\n  'user': os.getenv('USER'),\n  'env': 'test'\n}\n\nprint(json.dumps(config, indent=2))"
+}
+```
+
+### Compare Output Over Time
+
+Detect changes in output:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import platform\nprint(platform.platform())",
+  "path": "platform-info.txt",
+  "maxVariation": 0.1,
+  "overwrite": "aboveVariation"
+}
+```
+
+### Data Processing
+
+Transform data for tests:
+
+```json
+{
+  "action": "runCode",
+  "language": "javascript",
+  "code": "const data = [1, 2, 3, 4, 5];\nconst sum = data.reduce((a, b) => a + b, 0);\nconsole.log('Sum:', sum);",
+  "stdio": "Sum: 15"
+}
+```
+
+## Language-Specific Details
+
+### JavaScript
+
+- Uses Node.js runtime
+- Access environment variables via `process.env.VARIABLE_NAME`
+- Use `console.log()` for output
+- Return non-zero exit: `process.exit(1)`
+
+```json
+{
+  "action": "runCode",
+  "language": "javascript",
+  "code": "const user = process.env.USER || 'unknown';\nconsole.log(`Current user: ${user}`);"
+}
+```
+
+### Python
+
+- Uses system Python installation
+- Access environment variables via `os.getenv('VARIABLE_NAME')`
+- Use `print()` for output
+- Return non-zero exit: `sys.exit(1)` or raise exception
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import os\nuser = os.getenv('USER', 'unknown')\nprint(f'Current user: {user}')"
+}
+```
+
+### Bash
+
+- Uses system shell
+- Access environment variables via `$VARIABLE_NAME`
+- Use `echo` for output
+- Return non-zero exit: `exit 1`
+
+```json
+{
+  "action": "runCode",
+  "language": "bash",
+  "code": "echo \"Current user: ${USER:-unknown}\""
+}
+```
+
+## Using Environment Variables
+
+Load and use variables in code:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "runCode",
+      "language": "python",
+      "code": "import os\napi_key = os.getenv('API_KEY')\nprint(f'API Key loaded: {bool(api_key)}')"
+    }
+  ]
+}
+```
+
+## Working with Arguments
+
+While the `args` parameter exists, arguments are typically handled within the code itself using environment variables or hardcoded values, as argument passing varies by language.
+
+## Output Validation
+
+Validate output using `stdio`:
+
+### Exact Match
+```json
+{
+  "stdio": "Expected output"
+}
+```
+
+### Regex Pattern
+```json
+{
+  "stdio": "/output: \\d+/"
+}
+```
+
+## Error Handling
+
+The action fails when:
+- Exit code is not in `exitCodes`
+- Execution exceeds `timeout`
+- Expected `stdio` content is not found
+- Code has syntax errors
+- Required language runtime is not installed
+
+<Warning>
+  Ensure Python, Node.js, or Bash (depending on your needs) is installed and available in the system PATH.
+</Warning>
+
+## Use Cases
+
+### Custom Validation
+
+Complex validation logic:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import json\nwith open('response.json') as f:\n  data = json.load(f)\n  assert data['status'] == 'success', 'Status check failed'\n  print('Validation passed')"
+}
+```
+
+### Data Generation
+
+Create test data:
+
+```json
+{
+  "action": "runCode",
+  "language": "javascript",
+  "code": "const crypto = require('crypto');\nconst id = crypto.randomUUID();\nconsole.log(id);"
+}
+```
+
+### File Processing
+
+Read and process files:
+
+```json
+{
+  "action": "runCode",
+  "language": "python",
+  "code": "import csv\nwith open('data.csv') as f:\n  reader = csv.DictReader(f)\n  count = sum(1 for row in reader)\n  print(f'Row count: {count}')"
+}
+```
+
+## runCode vs. runShell
+
+**Use runCode when:**
+- You need to execute code in a specific language
+- You want to write inline scripts
+- You need language-specific features (Python modules, JavaScript APIs)
+
+**Use runShell when:**
+- You need to run system commands
+- You're calling external programs
+- You need shell features (pipes, redirects)
+
+## Related Actions
+
+- [runShell](/actions/runShell) - Execute shell commands
+- [loadVariables](/actions/loadVariables) - Load environment variables
+- [httpRequest](/actions/httpRequest) - Test HTTP endpoints

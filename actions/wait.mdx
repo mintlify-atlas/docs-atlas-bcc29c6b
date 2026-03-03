@@ -1,0 +1,286 @@
+---
+title: wait
+description: Pause test execution for a specified duration
+---
+
+The `wait` action pauses test execution for a specified duration in milliseconds. This is useful for waiting for animations, allowing time for asynchronous operations, or adding delays between actions.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Milliseconds
+{
+  "action": "wait",
+  "duration": 5000
+}
+```
+
+```json Boolean (Use Default)
+{
+  "action": "wait"
+}
+```
+
+```json Environment Variable
+{
+  "action": "wait",
+  "duration": "$WAIT_TIME"
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+The `wait` action accepts a single parameter that can be specified in multiple ways:
+
+<ParamField path="duration" type="number | string | boolean" default="5000">
+  Duration to wait in milliseconds.
+  
+  - **Number**: Wait for the specified number of milliseconds
+  - **Boolean `true`**: Use the default duration (5000ms)
+  - **String**: Environment variable containing the duration (e.g., `"$WAIT_TIME"`)
+</ParamField>
+
+## Examples
+
+### Wait 5 Seconds (Default)
+
+Use default wait time:
+
+```json
+{
+  "action": "wait"
+}
+```
+
+Or explicitly:
+
+```json
+{
+  "action": "wait",
+  "duration": 5000
+}
+```
+
+### Wait for Animation
+
+Short wait for CSS animations:
+
+```json
+{
+  "steps": [
+    {
+      "action": "click",
+      "selector": ".menu-trigger"
+    },
+    {
+      "action": "wait",
+      "duration": 300
+    },
+    {
+      "action": "click",
+      "selector": ".menu-item"
+    }
+  ]
+}
+```
+
+### Wait for Async Operation
+
+Longer wait for background processes:
+
+```json
+{
+  "steps": [
+    {
+      "action": "click",
+      "elementText": "Process Data"
+    },
+    {
+      "action": "wait",
+      "duration": 10000
+    },
+    {
+      "action": "find",
+      "elementText": "Processing complete"
+    }
+  ]
+}
+```
+
+### Wait Using Environment Variable
+
+Dynamic wait time from configuration:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "click",
+      "selector": "#submit"
+    },
+    {
+      "action": "wait",
+      "duration": "$PROCESSING_TIME"
+    }
+  ]
+}
+```
+
+### Pause Between Requests
+
+Rate limiting for API calls:
+
+```json
+{
+  "steps": [
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/resource/1"
+    },
+    {
+      "action": "wait",
+      "duration": 1000
+    },
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/resource/2"
+    }
+  ]
+}
+```
+
+### Wait for Page Transition
+
+Allow time for navigation to complete:
+
+```json
+{
+  "steps": [
+    {
+      "action": "click",
+      "elementText": "Next Page"
+    },
+    {
+      "action": "wait",
+      "duration": 2000
+    },
+    {
+      "action": "screenshot",
+      "path": "next-page.png"
+    }
+  ]
+}
+```
+
+## When to Use Wait
+
+Use `wait` when:
+- **Animations are playing** and you need to wait for them to complete
+- **Asynchronous operations** are in progress without visible indicators
+- **Rate limiting** is needed between actions
+- **Timing issues** occur intermittently (though consider using `find` with `timeout` instead)
+
+<Warning>
+  Using `wait` for element availability is not recommended. Use the [find](/actions/find) action with its built-in `timeout` parameter instead, as it's more reliable and efficient.
+</Warning>
+
+## Better Alternatives
+
+Instead of waiting for a fixed duration, consider:
+
+### Use `find` for Element Availability
+
+**Instead of:**
+```json
+{
+  "steps": [
+    { "action": "click", "selector": "#load-data" },
+    { "action": "wait", "duration": 5000 },
+    { "action": "click", "selector": "#results" }
+  ]
+}
+```
+
+**Use:**
+```json
+{
+  "steps": [
+    { "action": "click", "selector": "#load-data" },
+    { 
+      "action": "find",
+      "selector": "#results",
+      "timeout": 10000,
+      "click": true
+    }
+  ]
+}
+```
+
+### Use `goTo` waitUntil for Page Loading
+
+**Instead of:**
+```json
+{
+  "steps": [
+    { "action": "goTo", "url": "https://example.com" },
+    { "action": "wait", "duration": 3000 }
+  ]
+}
+```
+
+**Use:**
+```json
+{
+  "action": "goTo",
+  "url": "https://example.com",
+  "waitUntil": {
+    "find": {
+      "selector": "[data-testid='page-loaded']"
+    }
+  }
+}
+```
+
+## Common Durations
+
+- **100-300ms**: CSS transitions and quick animations
+- **500-1000ms**: Standard UI animations
+- **1000-3000ms**: Network requests and small data processing
+- **5000ms+**: Long-running operations (consider using `find` instead)
+
+<Tip>
+  Start with shorter waits and increase only if needed. Unnecessary long waits slow down test execution.
+</Tip>
+
+## Environment Variable Example
+
+`.env` file:
+```bash
+SHORT_WAIT=500
+MEDIUM_WAIT=2000
+LONG_WAIT=10000
+```
+
+Test:
+```json
+{
+  "steps": [
+    { "action": "loadVariables", "path": ".env" },
+    { "action": "click", "selector": ".animate" },
+    { "action": "wait", "duration": "$SHORT_WAIT" }
+  ]
+}
+```
+
+## Related Actions
+
+- [find](/actions/find) - Wait for elements with timeout (preferred for element availability)
+- [goTo](/actions/goTo) - Navigate with built-in wait conditions
+- [type](/actions/type) - Type with inputDelay for per-character pauses

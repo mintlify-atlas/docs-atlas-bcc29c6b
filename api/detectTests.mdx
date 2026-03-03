@@ -1,0 +1,451 @@
+---
+title: detectTests()
+description: Discover and parse test specifications from input files without executing them
+---
+
+The `detectTests()` function scans input paths for test specifications and documentation files, parses them according to file type definitions, and returns an array of detected test specifications. This function is useful for validating documentation structure, counting tests, or preparing tests for later execution.
+
+## Function Signature
+
+```typescript
+async function detectTests({
+  config
+}: {
+  config: Config
+}): Promise<Spec[]>
+```
+
+## Parameters
+
+<ParamField path="config" type="object" required>
+  Configuration object that defines how to detect tests. The config should have already been processed by `setConfig()` if you're using this function directly. Must conform to the [config schema](https://doc-detective.com/docs/references/schemas/config.html).
+  
+  <Expandable title="Key config properties for detection">
+    <ParamField path="input" type="string | string[]" required>
+      Path(s) to test specifications and documentation source files. Can be specific files or directories to scan.
+    </ParamField>
+    
+    <ParamField path="recursive" type="boolean" default={true}>
+      Whether to search input directories recursively for test files.
+    </ParamField>
+    
+    <ParamField path="fileTypes" type="array" required>
+      File types to process. Each can be a string (e.g., `'markdown'`, `'html'`, `'dita'`, `'asciidoc'`) or a custom file type object defining extensions and markup patterns.
+    </ParamField>
+    
+    <ParamField path="detectSteps" type="boolean" default={true}>
+      Whether to detect test steps from markup patterns in documentation (e.g., bold text for UI elements, code blocks for commands).
+    </ParamField>
+    
+    <ParamField path="beforeAny" type="string | string[]">
+      Path(s) to test specifications to include before main input files. Useful for setup scripts.
+    </ParamField>
+    
+    <ParamField path="afterAll" type="string | string[]">
+      Path(s) to test specifications to include after main input files. Useful for cleanup scripts.
+    </ParamField>
+    
+    <ParamField path="relativePathBase" type="string" default="cwd">
+      How to interpret relative paths: `'cwd'` (relative to current working directory) or `'file'` (relative to the file being processed).
+    </ParamField>
+    
+    <ParamField path="processDitaMaps" type="boolean" default={false}>
+      Whether to process DITA map files using the `dita` command-line tool.
+    </ParamField>
+    
+    <ParamField path="logLevel" type="string" default="info">
+      Logging verbosity: `'silent'`, `'error'`, `'warning'`, `'info'`, or `'debug'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="specs" type="Spec[]">
+  Array of test specifications detected from input files. Returns an empty array if no valid tests are found.
+  
+  <Expandable title="Spec structure">
+    <ResponseField name="specId" type="string">
+      Unique identifier for the specification, typically derived from the file path.
+    </ResponseField>
+    
+    <ResponseField name="contentPath" type="string">
+      Absolute path to the source file from which tests were detected.
+    </ResponseField>
+    
+    <ResponseField name="tests" type="Test[]">
+      Array of tests detected in this specification. Each test contains:
+      - `testId` - Unique identifier (if specified in source)
+      - `steps` - Array of test step objects
+      - `before` - Path to setup test (if specified)
+      - `after` - Path to cleanup test (if specified)
+    </ResponseField>
+    
+    <ResponseField name="runOn" type="Context[]">
+      Contexts in which to run tests (if specified in the spec file).
+    </ResponseField>
+    
+    <ResponseField name="openApi" type="object[]">
+      OpenAPI specifications referenced by this spec (if any).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+// First, set up and validate the config
+let config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+config = await setConfig({ config });
+
+// Detect tests
+const specs = await detectTests({ config });
+
+console.log(`Found ${specs.length} test specifications`);
+
+for (const spec of specs) {
+  console.log(`Spec: ${spec.contentPath}`);
+  console.log(`  Tests: ${spec.tests.length}`);
+  
+  const totalSteps = spec.tests.reduce((sum, test) => 
+    sum + test.steps.length, 0
+  );
+  console.log(`  Total steps: ${totalSteps}`);
+}
+```
+
+```typescript TypeScript
+import { detectTests } from 'doc-detective';
+import { setConfig } from 'doc-detective/src/core/config';
+import type { Config, Spec } from 'doc-detective';
+
+// First, set up and validate the config
+let config: Config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+config = await setConfig({ config });
+
+// Detect tests
+const specs: Spec[] = await detectTests({ config });
+
+console.log(`Found ${specs.length} test specifications`);
+
+for (const spec of specs) {
+  console.log(`Spec: ${spec.contentPath}`);
+  console.log(`  Tests: ${spec.tests.length}`);
+  
+  const totalSteps = spec.tests.reduce((sum, test) => 
+    sum + test.steps.length, 0
+  );
+  console.log(`  Total steps: ${totalSteps}`);
+}
+```
+</CodeGroup>
+
+## Detecting from Multiple Sources
+
+Scan multiple input paths for tests:
+
+```javascript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: [
+    './docs/getting-started',
+    './docs/api-reference',
+    './docs/tutorials'
+  ],
+  recursive: true,
+  fileTypes: ['markdown', 'html']
+};
+
+config = await setConfig({ config });
+const specs = await detectTests({ config });
+
+console.log(`Detected ${specs.length} specs from multiple sources`);
+```
+
+## Detecting from JSON/YAML Specifications
+
+Detect tests from explicit test specification files:
+
+```javascript
+let config = {
+  input: './tests/specs',
+  recursive: true,
+  fileTypes: ['markdown']  // Markdown is default, but JSON/YAML specs are always checked
+};
+
+config = await setConfig({ config });
+const specs = await detectTests({ config });
+
+// Filter JSON/YAML specs vs. detected from markup
+const explicitSpecs = specs.filter(spec => 
+  spec.contentPath.match(/\.(json|ya?ml)$/)
+);
+const markupSpecs = specs.filter(spec => 
+  !spec.contentPath.match(/\.(json|ya?ml)$/)
+);
+
+console.log(`Explicit specs: ${explicitSpecs.length}`);
+console.log(`Detected from markup: ${markupSpecs.length}`);
+```
+
+## Analyzing Test Coverage
+
+Use `detectTests()` to analyze test coverage across documentation:
+
+```javascript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+config = await setConfig({ config });
+const specs = await detectTests({ config });
+
+// Analyze coverage
+const stats = {
+  totalSpecs: specs.length,
+  totalTests: 0,
+  totalSteps: 0,
+  stepTypes: {}
+};
+
+for (const spec of specs) {
+  stats.totalTests += spec.tests.length;
+  
+  for (const test of spec.tests) {
+    stats.totalSteps += test.steps.length;
+    
+    // Count step types
+    for (const step of test.steps) {
+      const stepType = Object.keys(step).find(key => 
+        !['id', 'description'].includes(key)
+      );
+      
+      if (stepType) {
+        stats.stepTypes[stepType] = (stats.stepTypes[stepType] || 0) + 1;
+      }
+    }
+  }
+}
+
+console.log('Test Coverage Statistics:');
+console.log(`  Specifications: ${stats.totalSpecs}`);
+console.log(`  Tests: ${stats.totalTests}`);
+console.log(`  Steps: ${stats.totalSteps}`);
+console.log('  Step type distribution:');
+
+for (const [type, count] of Object.entries(stats.stepTypes)) {
+  console.log(`    ${type}: ${count}`);
+}
+```
+
+## Filtering by File Type
+
+Detect tests only from specific file types:
+
+```javascript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+// Only detect from Markdown files
+let config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+config = await setConfig({ config });
+const mdSpecs = await detectTests({ config });
+console.log(`Markdown specs: ${mdSpecs.length}`);
+
+// Only detect from DITA files
+config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['dita']
+};
+
+config = await setConfig({ config });
+const ditaSpecs = await detectTests({ config });
+console.log(`DITA specs: ${ditaSpecs.length}`);
+```
+
+## Custom File Types
+
+Define custom file types with specific markup patterns:
+
+```javascript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: [
+    {
+      name: 'custom-markdown',
+      extensions: ['md', 'markdown'],
+      inlineStatements: {
+        testStart: ['<!-- test (.+?) -->'],
+        testEnd: ['<!-- end test -->'],
+        step: ['<!-- step (.+?) -->']
+      },
+      markup: [
+        {
+          name: 'customButton',
+          regex: ['\\[Button: ([^\\]]+)\\]'],
+          actions: ['click']
+        }
+      ]
+    }
+  ]
+};
+
+config = await setConfig({ config });
+const specs = await detectTests({ config });
+```
+
+## Validating Test Structure
+
+Detect tests and validate they meet requirements:
+
+```javascript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+config = await setConfig({ config });
+const specs = await detectTests({ config });
+
+const issues = [];
+
+for (const spec of specs) {
+  // Check for empty tests
+  const emptyTests = spec.tests.filter(test => 
+    !test.steps || test.steps.length === 0
+  );
+  
+  if (emptyTests.length > 0) {
+    issues.push(`${spec.contentPath}: ${emptyTests.length} empty test(s)`);
+  }
+  
+  // Check for tests without IDs
+  const unidentifiedTests = spec.tests.filter(test => !test.testId);
+  
+  if (unidentifiedTests.length > 0) {
+    issues.push(
+      `${spec.contentPath}: ${unidentifiedTests.length} test(s) without IDs`
+    );
+  }
+}
+
+if (issues.length > 0) {
+  console.warn('Test structure issues:');
+  issues.forEach(issue => console.warn(`  - ${issue}`));
+} else {
+  console.log('All tests have valid structure');
+}
+```
+
+## Processing DITA Maps
+
+Detect tests from DITA map files:
+
+```javascript
+const { detectTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs/documentation.ditamap',
+  fileTypes: ['dita'],
+  processDitaMaps: true,  // Process the map with DITA CLI
+  recursive: true
+};
+
+config = await setConfig({ config });
+const specs = await detectTests({ config });
+
+console.log(`Detected ${specs.length} specs from DITA map`);
+```
+
+## Behavior
+
+The `detectTests()` function performs the following steps:
+
+1. **File Discovery** - Scans input paths for valid source files based on file type extensions
+2. **File Validation** - Validates files against schema requirements (for JSON/YAML specs)
+3. **DITA Processing** - Processes DITA maps with the `dita` CLI tool if `processDitaMaps` is enabled
+4. **Content Parsing** - Reads file contents and parses them based on file type
+5. **Test Extraction** - Extracts tests using inline statements and markup patterns
+6. **Path Resolution** - Resolves relative paths based on `relativePathBase` setting
+7. **Schema Validation** - Validates detected tests against the spec schema
+8. **Result Assembly** - Returns array of valid test specifications
+
+## File Type Detection
+
+The function processes different file types:
+
+- **JSON/YAML specs** - Validated against the spec schema and returned as-is (with path resolution)
+- **Text files** (Markdown, HTML, DITA, AsciiDoc) - Parsed for inline test statements and markup patterns
+- **Executable files** - Converted to `runShell` steps if `fileTypes` includes a `runShell` configuration
+
+## Markup Pattern Detection
+
+When `detectSteps` is `true`, the function detects test steps from markup patterns:
+
+- **Markdown** - Bold text for UI elements, links for navigation, code blocks for commands
+- **DITA** - `<uicontrol>` for UI elements, `<xref>` for links, `<userinput>` for input
+- **HTML** - Custom patterns based on file type configuration
+
+## Notes
+
+- Files in `node_modules` directories are automatically excluded
+- Invalid test specifications are logged as warnings and skipped
+- Remote URLs (http/https) are downloaded before processing
+- The function respects `beforeAny` and `afterAll` sequences from config
+- Paths are resolved relative to `cwd` or file location based on `relativePathBase`
+- Tests with `before` and `after` properties have setup/cleanup steps automatically merged
+
+## Error Handling
+
+The function handles errors gracefully:
+
+- Invalid files are logged and skipped
+- Malformed JSON/YAML files are treated as text content
+- Missing file dependencies (from `before`/`after`) cause the spec to be skipped
+- Invalid test specifications are logged with validation errors
+
+## See Also
+
+- [resolveTests()](/api/resolveTests) - Resolve detected tests for execution
+- [runTests()](/api/runTests) - Detect and run tests in one step
+- [Config schema](https://doc-detective.com/docs/references/schemas/config.html) - Full configuration options
+- [Spec schema](https://doc-detective.com/docs/references/schemas/spec.html) - Test specification structure

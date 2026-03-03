@@ -1,0 +1,511 @@
+---
+title: resolveTests()
+description: Transform detected test specifications into resolved tests ready for execution
+---
+
+The `resolveTests()` function takes test specifications from `detectTests()` and resolves them into a structure ready for execution. It expands contexts (platform/browser combinations), loads OpenAPI definitions, generates unique IDs, and creates fully-resolved test objects with all necessary metadata.
+
+## Function Signature
+
+```typescript
+async function resolveTests({
+  config,
+  detectedTests
+}: {
+  config: Config;
+  detectedTests: Spec[];
+}): Promise<ResolvedTests>
+```
+
+## Parameters
+
+<ParamField path="config" type="object" required>
+  Configuration object that defines execution contexts and settings. Must conform to the [config schema](https://doc-detective.com/docs/references/schemas/config.html).
+  
+  <Expandable title="Key config properties for resolution">
+    <ParamField path="runOn" type="Context[]">
+      Default contexts (platform/browser combinations) to run tests in. Can be overridden by spec-level or test-level `runOn` properties.
+    </ParamField>
+    
+    <ParamField path="integrations.openApi" type="object[]">
+      Global OpenAPI specifications to make available to all tests.
+    </ParamField>
+    
+    <ParamField path="logLevel" type="string" default="info">
+      Logging verbosity: `'silent'`, `'error'`, `'warning'`, `'info'`, or `'debug'`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="detectedTests" type="Spec[]" required>
+  Array of test specifications from `detectTests()`. Each spec should have `tests`, `runOn`, and `openApi` properties.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="resolvedTests" type="ResolvedTests">
+  Object containing resolved tests ready for execution.
+  
+  <Expandable title="ResolvedTests structure">
+    <ResponseField name="resolvedTestsId" type="string">
+      Unique identifier (UUID) for this resolution.
+    </ResponseField>
+    
+    <ResponseField name="config" type="Config">
+      The configuration object used for resolution.
+    </ResponseField>
+    
+    <ResponseField name="specs" type="ResolvedSpec[]">
+      Array of resolved test specifications, each containing:
+      
+      <Expandable title="ResolvedSpec properties">
+        <ResponseField name="specId" type="string">
+          Unique identifier for the specification.
+        </ResponseField>
+        
+        <ResponseField name="contentPath" type="string">
+          Path to the source file.
+        </ResponseField>
+        
+        <ResponseField name="runOn" type="Context[]">
+          Resolved contexts for this spec (merged from config, spec, and test levels).
+        </ResponseField>
+        
+        <ResponseField name="openApi" type="object[]">
+          Loaded OpenAPI definitions with parsed specifications.
+        </ResponseField>
+        
+        <ResponseField name="tests" type="ResolvedTest[]">
+          Array of resolved tests, each containing:
+          
+          <Expandable title="ResolvedTest properties">
+            <ResponseField name="testId" type="string">
+              Unique identifier for the test.
+            </ResponseField>
+            
+            <ResponseField name="contexts" type="ResolvedContext[]">
+              Array of contexts to run this test in. Each context contains:
+              - `contextId` - Unique identifier for the context
+              - `platform` - Platform name (linux/mac/windows)
+              - `browser` - Browser configuration (if required by test)
+              - `steps` - Array of test steps to execute
+              - `unsafe` - Whether test contains unsafe steps
+              - `openApi` - OpenAPI definitions for this context
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux', 'mac'],
+      browsers: ['chrome']
+    }
+  ]
+};
+
+config = await setConfig({ config });
+
+// First detect tests
+const detectedTests = await detectTests({ config });
+console.log(`Detected ${detectedTests.length} specs`);
+
+// Then resolve them
+const resolvedTests = await resolveTests({ config, detectedTests });
+console.log(`Resolved ${resolvedTests.specs.length} specs`);
+
+// Count total contexts
+const totalContexts = resolvedTests.specs.reduce((sum, spec) => {
+  return sum + spec.tests.reduce((testSum, test) => {
+    return testSum + test.contexts.length;
+  }, 0);
+}, 0);
+
+console.log(`Total test contexts: ${totalContexts}`);
+```
+
+```typescript TypeScript
+import { detectTests, resolveTests } from 'doc-detective';
+import { setConfig } from 'doc-detective/src/core/config';
+import type { Config, Spec, ResolvedTests } from 'doc-detective';
+
+let config: Config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux', 'mac'],
+      browsers: ['chrome']
+    }
+  ]
+};
+
+config = await setConfig({ config });
+
+// First detect tests
+const detectedTests: Spec[] = await detectTests({ config });
+console.log(`Detected ${detectedTests.length} specs`);
+
+// Then resolve them
+const resolvedTests: ResolvedTests = await resolveTests({ 
+  config, 
+  detectedTests 
+});
+console.log(`Resolved ${resolvedTests.specs.length} specs`);
+
+// Count total contexts
+const totalContexts = resolvedTests.specs.reduce((sum, spec) => {
+  return sum + spec.tests.reduce((testSum, test) => {
+    return testSum + test.contexts.length;
+  }, 0);
+}, 0);
+
+console.log(`Total test contexts: ${totalContexts}`);
+```
+</CodeGroup>
+
+## Context Resolution
+
+The function expands contexts into individual platform/browser combinations:
+
+```javascript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux', 'mac', 'windows'],
+      browsers: ['chrome', 'firefox']
+    }
+  ]
+};
+
+config = await setConfig({ config });
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// This creates 6 contexts (3 platforms × 2 browsers)
+for (const spec of resolvedTests.specs) {
+  for (const test of spec.tests) {
+    console.log(`Test ${test.testId} has ${test.contexts.length} contexts:`);
+    
+    for (const context of test.contexts) {
+      console.log(`  - ${context.platform} / ${context.browser?.name}`);
+    }
+  }
+}
+```
+
+## Loading OpenAPI Definitions
+
+Resolve tests with OpenAPI specifications:
+
+```javascript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs/api',
+  fileTypes: ['markdown'],
+  integrations: {
+    openApi: [
+      {
+        name: 'petstore',
+        descriptionPath: './specs/petstore.yaml'
+      }
+    ]
+  }
+};
+
+config = await setConfig({ config });
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// OpenAPI definitions are now loaded and available
+for (const spec of resolvedTests.specs) {
+  if (spec.openApi && spec.openApi.length > 0) {
+    console.log(`Spec ${spec.specId} has ${spec.openApi.length} OpenAPI definitions`);
+    
+    for (const api of spec.openApi) {
+      console.log(`  - ${api.name}: ${api.definition?.info?.title}`);
+    }
+  }
+}
+```
+
+## Selective Test Resolution
+
+Resolve only specific tests:
+
+```javascript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+config = await setConfig({ config });
+
+// Detect all tests
+const allTests = await detectTests({ config });
+
+// Filter to only UI tests (those requiring a browser)
+const uiTests = allTests.map(spec => ({
+  ...spec,
+  tests: spec.tests.filter(test => 
+    test.steps.some(step => 
+      step.click || step.find || step.goTo || step.type
+    )
+  )
+})).filter(spec => spec.tests.length > 0);
+
+console.log(`Filtered to ${uiTests.length} UI test specs`);
+
+// Resolve only UI tests
+const resolvedTests = await resolveTests({ config, detectedTests: uiTests });
+console.log(`Resolved ${resolvedTests.specs.length} UI specs`);
+```
+
+## Inspecting Resolved Contexts
+
+Analyze how contexts are resolved:
+
+```javascript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux'],
+      browsers: ['chrome']
+    }
+  ]
+};
+
+config = await setConfig({ config });
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// Analyze context distribution
+const contextStats = {
+  browserRequired: 0,
+  noBrowserRequired: 0,
+  totalContexts: 0
+};
+
+for (const spec of resolvedTests.specs) {
+  for (const test of spec.tests) {
+    contextStats.totalContexts += test.contexts.length;
+    
+    for (const context of test.contexts) {
+      if (context.browser) {
+        contextStats.browserRequired++;
+      } else {
+        contextStats.noBrowserRequired++;
+      }
+    }
+  }
+}
+
+console.log('Context Statistics:');
+console.log(`  Total contexts: ${contextStats.totalContexts}`);
+console.log(`  With browser: ${contextStats.browserRequired}`);
+console.log(`  Without browser: ${contextStats.noBrowserRequired}`);
+```
+
+## Passing Resolved Tests to runTests()
+
+Use resolved tests to skip detection and resolution in `runTests()`:
+
+```javascript
+const { detectTests, resolveTests, runTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+config = await setConfig({ config });
+
+// Separate detection, resolution, and execution
+const detectedTests = await detectTests({ config });
+console.log('Detection complete');
+
+const resolvedTests = await resolveTests({ config, detectedTests });
+console.log('Resolution complete');
+
+// Run with pre-resolved tests
+const results = await runTests(config, { resolvedTests });
+console.log('Execution complete');
+```
+
+## Multi-Platform Testing
+
+Resolve tests for multiple platforms:
+
+```javascript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux'],
+      browsers: ['chrome', 'firefox']
+    },
+    {
+      platforms: ['mac'],
+      browsers: ['safari']
+    },
+    {
+      platforms: ['windows'],
+      browsers: ['chrome']
+    }
+  ]
+};
+
+config = await setConfig({ config });
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// Analyze platform distribution
+const platforms = {};
+
+for (const spec of resolvedTests.specs) {
+  for (const test of spec.tests) {
+    for (const context of test.contexts) {
+      const key = `${context.platform}/${context.browser?.name || 'no-browser'}`;
+      platforms[key] = (platforms[key] || 0) + 1;
+    }
+  }
+}
+
+console.log('Test contexts by platform/browser:');
+for (const [combo, count] of Object.entries(platforms)) {
+  console.log(`  ${combo}: ${count}`);
+}
+```
+
+## Browser Detection
+
+The function automatically determines if a browser is required:
+
+```javascript
+const { detectTests, resolveTests } = require('doc-detective');
+const { setConfig } = require('doc-detective/src/core/config');
+
+let config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  runOn: [
+    {
+      platforms: ['linux'],
+      browsers: ['chrome']
+    }
+  ]
+};
+
+config = await setConfig({ config });
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+for (const spec of resolvedTests.specs) {
+  for (const test of spec.tests) {
+    const hasBrowserSteps = test.contexts[0].steps.some(step =>
+      step.click || step.find || step.goTo || step.type || 
+      step.screenshot || step.record
+    );
+    
+    console.log(`Test ${test.testId}:`);
+    console.log(`  Browser required: ${hasBrowserSteps}`);
+    console.log(`  Contexts: ${test.contexts.length}`);
+  }
+}
+```
+
+## Behavior
+
+The `resolveTests()` function performs the following steps:
+
+1. **Spec Processing** - Iterates through each detected test specification
+2. **ID Generation** - Generates UUIDs for specs, tests, and contexts if not provided
+3. **OpenAPI Loading** - Loads and parses OpenAPI definition files
+4. **Context Merging** - Merges `runOn` contexts from config, spec, and test levels
+5. **Context Expansion** - Expands multi-value contexts into individual platform/browser pairs
+6. **Browser Detection** - Determines if tests require a browser based on step types
+7. **Context Creation** - Creates resolved context objects with steps and metadata
+8. **Assembly** - Returns structured ResolvedTests object ready for execution
+
+## Context Resolution Logic
+
+Contexts are resolved with the following priority:
+
+1. Test-level `runOn` (highest priority)
+2. Spec-level `runOn`
+3. Config-level `runOn` (lowest priority)
+
+If no contexts are defined at any level, a default empty context is created.
+
+## Browser Requirement Detection
+
+The function checks if tests contain steps that require a browser:
+
+- `click` - Clicking UI elements
+- `dragAndDrop` - Drag and drop operations
+- `find` - Finding UI elements
+- `goTo` - Navigating to URLs
+- `loadCookie` / `saveCookie` - Cookie management
+- `record` / `stopRecord` - Video recording
+- `screenshot` - Taking screenshots
+- `type` - Typing into elements
+
+If none of these steps are present, contexts are created without browser specifications.
+
+## Notes
+
+- Contexts are deduplicated - identical platform/browser combinations are merged
+- OpenAPI definitions are loaded asynchronously and cached
+- Failed OpenAPI loads are logged but don't stop resolution
+- Browser names are normalized (e.g., 'safari' → 'webkit')
+- Each context gets a unique `contextId` (UUID)
+- Steps are cloned to each context (not shared references)
+- The `unsafe` flag is propagated from tests to contexts
+
+## Error Handling
+
+The function handles errors gracefully:
+
+- Missing OpenAPI files are logged as errors and skipped
+- Invalid context configurations are logged and use defaults
+- Empty test arrays are preserved (specs with no tests)
+
+## See Also
+
+- [detectTests()](/api/detectTests) - Detect tests from input files
+- [runTests()](/api/runTests) - Execute resolved tests
+- [Config schema](https://doc-detective.com/docs/references/schemas/config.html) - Configuration options
+- [ResolvedTests schema](https://doc-detective.com/docs/references/schemas/resolvedTests.html) - Resolved tests structure

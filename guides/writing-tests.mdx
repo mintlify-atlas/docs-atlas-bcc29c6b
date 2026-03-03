@@ -1,0 +1,509 @@
+---
+title: Writing Test Specifications
+description: Learn how to write test specifications using JSON or YAML to define comprehensive test scenarios for your documentation
+---
+
+Test specifications are JSON or YAML files that define test scenarios for your documentation. They provide a structured way to define tests, contexts, and steps that Doc Detective should execute.
+
+## Basic Structure
+
+A test specification consists of:
+
+- **specId**: Unique identifier for the specification
+- **tests**: Array of test objects
+- **contexts**: Optional execution contexts (platforms, browsers)
+- **runOn**: Optional runtime configuration
+
+<Tabs>
+  <Tab title="JSON">
+    ```json
+    {
+      "specId": "my-first-test",
+      "tests": [
+        {
+          "testId": "basic-navigation",
+          "description": "Navigate to a website and verify content",
+          "steps": [
+            {
+              "action": "goTo",
+              "url": "https://example.com"
+            },
+            {
+              "action": "find",
+              "selector": "h1"
+            }
+          ]
+        }
+      ]
+    }
+    ```
+  </Tab>
+  <Tab title="YAML">
+    ```yaml
+    specId: my-first-test
+    tests:
+      - testId: basic-navigation
+        description: Navigate to a website and verify content
+        steps:
+          - action: goTo
+            url: https://example.com
+          - action: find
+            selector: h1
+    ```
+  </Tab>
+</Tabs>
+
+## Writing Your First Test
+
+<Steps>
+  <Step title="Create a test file">
+    Create a new file with a `.spec.json` or `.spec.yaml` extension:
+
+    ```bash
+    touch my-test.spec.json
+    ```
+  </Step>
+
+  <Step title="Define the specification">
+    Add a `specId` and `tests` array:
+
+    ```json
+    {
+      "specId": "search-test",
+      "tests": []
+    }
+    ```
+  </Step>
+
+  <Step title="Add a test with steps">
+    Define your test scenario with steps:
+
+    ```json
+    {
+      "specId": "search-test",
+      "tests": [
+        {
+          "testId": "kitten-search",
+          "steps": [
+            {
+              "action": "goTo",
+              "url": "https://www.duckduckgo.com"
+            },
+            {
+              "action": "find",
+              "selector": "#searchbox_input",
+              "click": true,
+              "typeKeys": {
+                "keys": ["American Shorthair kittens", "$ENTER$"]
+              }
+            },
+            {
+              "action": "find",
+              "selector": "[data-testid='web-vertical']"
+            },
+            {
+              "action": "saveScreenshot",
+              "path": "search-results.png"
+            }
+          ]
+        }
+      ]
+    }
+    ```
+  </Step>
+
+  <Step title="Run the test">
+    Execute your test specification:
+
+    ```bash
+    npx doc-detective my-test.spec.json
+    ```
+  </Step>
+</Steps>
+
+## Common Actions
+
+### Navigation and Interaction
+
+<Tabs>
+  <Tab title="Go to URL">
+    ```json
+    {
+      "action": "goTo",
+      "url": "https://example.com"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Click Element">
+    ```json
+    {
+      "action": "find",
+      "selector": "button.submit",
+      "click": true
+    }
+    ```
+  </Tab>
+
+  <Tab title="Type Text">
+    ```json
+    {
+      "action": "find",
+      "selector": "#username",
+      "typeKeys": {
+        "keys": ["myusername"]
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Special Keys">
+    ```json
+    {
+      "action": "typeKeys",
+      "keys": ["$ENTER$", "$TAB$", "$ESCAPE$"]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Verification
+
+```json
+{
+  "action": "find",
+  "selector": ".success-message",
+  "timeout": 5000
+}
+```
+
+### Screenshots
+
+```json
+{
+  "action": "saveScreenshot",
+  "path": "result.png",
+  "directory": "screenshots",
+  "maxVariation": 5,
+  "overwrite": "byVariation"
+}
+```
+
+### HTTP Requests
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users",
+  "method": "post",
+  "requestData": {
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  "responseData": {
+    "id": "*",
+    "name": "John Doe"
+  },
+  "statusCodes": [200, 201]
+}
+```
+
+### Shell Commands
+
+```json
+{
+  "action": "runShell",
+  "command": "docker",
+  "args": ["run", "hello-world"],
+  "workingDirectory": "."
+}
+```
+
+<Warning>
+Shell commands run with the same permissions as Doc Detective. Be careful when running commands that modify your system.
+</Warning>
+
+### Link Checking
+
+```json
+{
+  "action": "checkLink",
+  "url": "https://example.com"
+}
+```
+
+## Working with Variables
+
+### Load Environment Variables
+
+```json
+{
+  "action": "setVariables",
+  "path": ".env"
+}
+```
+
+Then use them in subsequent steps:
+
+```json
+{
+  "action": "runShell",
+  "command": "echo",
+  "args": ["$USER"]
+}
+```
+
+### Extract Response Data
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users",
+  "method": "post",
+  "requestData": {
+    "name": "John Doe"
+  },
+  "variables": {
+    "USER_ID": "$$response.body.id"
+  }
+}
+```
+
+Use the extracted variable:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users/$USER_ID",
+  "method": "get"
+}
+```
+
+## Test Organization
+
+### Setup and Cleanup
+
+Use `before` and `after` properties to reference setup and cleanup files:
+
+```json
+{
+  "tests": [
+    {
+      "testId": "main-test",
+      "before": "./setup.spec.json",
+      "after": "./cleanup.spec.json",
+      "steps": [
+        // Main test steps
+      ]
+    }
+  ]
+}
+```
+
+### Multiple Tests in One Spec
+
+```json
+{
+  "specId": "user-workflows",
+  "tests": [
+    {
+      "testId": "user-registration",
+      "steps": [/* registration steps */]
+    },
+    {
+      "testId": "user-login",
+      "steps": [/* login steps */]
+    },
+    {
+      "testId": "user-profile-update",
+      "steps": [/* profile update steps */]
+    }
+  ]
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use descriptive IDs" icon="tag">
+    Choose clear, meaningful identifiers for specs and tests:
+    ```json
+    "testId": "checkout-payment-flow"
+    ```
+  </Card>
+
+  <Card title="Add descriptions" icon="file-lines">
+    Document what each test does:
+    ```json
+    "description": "Verify payment processing with valid credit card"
+    ```
+  </Card>
+
+  <Card title="Set appropriate timeouts" icon="clock">
+    Allow enough time for slow operations:
+    ```json
+    "timeout": 10000
+    ```
+  </Card>
+
+  <Card title="Use specific selectors" icon="bullseye">
+    Prefer IDs and data attributes over generic classes:
+    ```json
+    "selector": "[data-testid='submit-button']"
+    ```
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### Login Flow
+
+```json
+{
+  "testId": "login-test",
+  "steps": [
+    {
+      "action": "setVariables",
+      "path": ".env"
+    },
+    {
+      "action": "goTo",
+      "url": "https://app.example.com/login"
+    },
+    {
+      "action": "find",
+      "selector": "#email",
+      "typeKeys": {
+        "keys": ["$EMAIL"]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "#password",
+      "typeKeys": {
+        "keys": ["$PASSWORD"]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "button[type='submit']",
+      "click": true
+    },
+    {
+      "action": "find",
+      "selector": ".dashboard",
+      "timeout": 10000
+    }
+  ]
+}
+```
+
+### Form Submission
+
+```json
+{
+  "testId": "contact-form",
+  "steps": [
+    {
+      "action": "goTo",
+      "url": "https://example.com/contact"
+    },
+    {
+      "action": "find",
+      "selector": "#name",
+      "typeKeys": {
+        "keys": ["John Doe"]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "#email",
+      "typeKeys": {
+        "keys": ["john@example.com"]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "#message",
+      "typeKeys": {
+        "keys": ["This is a test message."]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "button.submit",
+      "click": true
+    },
+    {
+      "action": "find",
+      "selector": ".success-message"
+    }
+  ]
+}
+```
+
+### API Testing
+
+```json
+{
+  "testId": "api-crud-operations",
+  "steps": [
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/items",
+      "method": "post",
+      "requestData": {
+        "name": "Test Item"
+      },
+      "variables": {
+        "ITEM_ID": "$$response.body.id"
+      },
+      "statusCodes": [201]
+    },
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/items/$ITEM_ID",
+      "method": "get",
+      "responseData": {
+        "name": "Test Item"
+      }
+    },
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/items/$ITEM_ID",
+      "method": "delete",
+      "statusCodes": [204]
+    }
+  ]
+}
+```
+
+<Warning>
+**Common Pitfalls**
+
+- Forgetting to add waits after navigation or clicks
+- Using overly generic selectors that match multiple elements
+- Not handling dynamic content that loads asynchronously
+- Hard-coding credentials instead of using environment variables
+- Not cleaning up resources (files, Docker containers) after tests
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Inline Tests" href="/guides/inline-tests" icon="file-code">
+    Learn how to embed tests directly in your markdown files
+  </Card>
+  
+  <Card title="Configuration" href="/guides/configuration" icon="gear">
+    Customize Doc Detective's behavior with configuration
+  </Card>
+  
+  <Card title="Contexts" href="/guides/contexts" icon="browsers">
+    Run tests across multiple platforms and browsers
+  </Card>
+  
+  <Card title="CI/CD Integration" href="/guides/ci-cd" icon="rocket">
+    Automate your tests in CI/CD pipelines
+  </Card>
+</CardGroup>

@@ -1,0 +1,83 @@
+---
+title: Actions Overview
+description: Complete reference of all available test actions in Doc Detective
+---
+
+Actions are the building blocks of Doc Detective tests. Each action performs a specific task, from navigating to URLs to interacting with page elements to making HTTP requests.
+
+## Browser Actions
+
+These actions interact with web browsers and page elements:
+
+- [**goTo**](/actions/goTo) - Navigate to a URL
+- [**find**](/actions/find) - Find and optionally interact with page elements
+- [**click**](/actions/click) - Click on page elements
+- [**type**](/actions/type) - Type keys into elements or the active element
+- [**wait**](/actions/wait) - Pause execution for a specified duration
+- [**screenshot**](/actions/screenshot) - Capture screenshots of pages or elements
+- [**record**](/actions/record) - Start/stop video recordings of browser sessions
+
+## HTTP & API Actions
+
+These actions test HTTP endpoints and APIs:
+
+- [**checkLink**](/actions/checkLink) - Verify that URLs return acceptable status codes
+- [**httpRequest**](/actions/httpRequest) - Perform HTTP requests with full request/response validation
+
+## System & Code Actions
+
+These actions interact with the system and execute code:
+
+- [**runShell**](/actions/runShell) - Execute shell commands
+- [**runCode**](/actions/runCode) - Run code in Python, JavaScript, or Bash
+- [**loadVariables**](/actions/loadVariables) - Load environment variables from files
+
+## Action Syntax
+
+Most actions support both simple and detailed syntax:
+
+<CodeGroup>
+
+```json Simple Syntax
+{
+  "action": "goTo",
+  "url": "https://example.com"
+}
+```
+
+```json Detailed Syntax
+{
+  "action": "goTo",
+  "url": "https://example.com",
+  "timeout": 30000,
+  "waitUntil": {
+    "networkIdleTime": 500
+  }
+}
+```
+
+</CodeGroup>
+
+## Using Variables
+
+Many action parameters support environment variables using the `$VARIABLE_NAME` syntax:
+
+```json
+{
+  "action": "goTo",
+  "url": "$BASE_URL/dashboard"
+}
+```
+
+Load variables from a `.env` file using the [loadVariables](/actions/loadVariables) action.
+
+## Error Handling
+
+Actions fail when:
+- Required parameters are missing
+- Elements cannot be found (for element actions)
+- Timeouts are exceeded
+- Expected values don't match actual values
+- HTTP status codes are unexpected
+
+When an action fails, the test stops and reports the error.

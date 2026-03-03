@@ -1,0 +1,309 @@
+---
+title: Tests
+description: Learn about test specifications, tests, and steps in Doc Detective
+---
+
+Doc Detective tests are structured in a three-level hierarchy: **test specifications** contain **tests**, which contain **steps**. This structure provides flexibility in organizing and running your documentation tests.
+
+## Test Specifications
+
+A test specification (or spec) is the top-level container for one or more tests. Test specifications are stored as JSON files and can include configuration that applies to all tests within them.
+
+### Basic Structure
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        // Your test steps go here
+      ]
+    }
+  ]
+}
+```
+
+### Specification Properties
+
+Test specifications support several optional properties:
+
+- **specId**: Unique identifier for the specification
+- **description**: Human-readable description of what the spec tests
+- **contexts**: Platform and browser combinations to run tests in (overrides config-level contexts)
+- **tests**: Array of test objects (required, minimum 1 test)
+
+<Note>
+The `contexts` property at the spec level overrides contexts defined in your configuration file. This allows you to run specific specs in different environments.
+</Note>
+
+### Example with Metadata
+
+```json
+{
+  "specId": "search-feature-tests",
+  "description": "Tests for the search functionality",
+  "contexts": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": ["firefox", "chrome"]
+    }
+  ],
+  "tests": [
+    {
+      "testId": "basic-search",
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://example.com"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Tests
+
+A test is a logical grouping of steps that validate a specific feature or workflow. Each test runs independently and produces its own pass/fail result.
+
+### Test Properties
+
+- **testId**: Unique identifier for the test
+- **description**: Describes what the test validates
+- **steps**: Array of step objects to execute (required, minimum 1 step)
+- **before**: Path to a spec to run before this test (for setup)
+- **after**: Path to a spec to run after this test (for cleanup)
+- **detectSteps**: Enable/disable step detection from markup
+- **contexts**: Override contexts for this specific test
+
+### Setup and Cleanup
+
+The `before` and `after` properties allow you to run setup and cleanup operations while maintaining the test's context (browser state, cookies, etc.).
+
+```json
+{
+  "tests": [
+    {
+      "testId": "authenticated-workflow",
+      "description": "Test workflow that requires authentication",
+      "before": "./setup/login.spec.json",
+      "after": "./cleanup/logout.spec.json",
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://example.com/dashboard"
+        }
+      ]
+    }
+  ]
+}
+```
+
+<Warning>
+When using `before` and `after`, only the `steps` property from the first test in the referenced spec is used. The context (browser session, environment variables) is preserved.
+</Warning>
+
+## Steps
+
+Steps are the individual actions that make up a test. Each step performs a specific action like navigating to a URL, clicking an element, or running a shell command.
+
+### Step Structure
+
+Every step has an `action` property that specifies what to do:
+
+```json
+{
+  "action": "goTo",
+  "url": "https://www.duckduckgo.com"
+}
+```
+
+### Common Step Properties
+
+All steps support these optional properties:
+
+- **stepId**: Unique identifier for the step
+- **description**: Human-readable description
+- **unsafe**: Mark step as potentially unsafe (requires Docker or `--allow-unsafe` flag)
+- **outputs**: Define outputs to reference in later steps
+- **variables**: Set environment variables from expressions
+- **breakpoint**: Pause execution when debugging is enabled
+
+### Step Execution Order
+
+Steps execute sequentially in the order defined. By default, if a step fails, the test stops and remaining steps are skipped.
+
+```json
+{
+  "steps": [
+    {
+      "stepId": "navigate",
+      "action": "goTo",
+      "url": "https://www.google.com"
+    },
+    {
+      "stepId": "search",
+      "action": "find",
+      "selector": "[title=Search]",
+      "click": true,
+      "typeKeys": {
+        "keys": ["shorthair cat", "$ENTER$"]
+      }
+    },
+    {
+      "stepId": "verify",
+      "action": "wait"
+    },
+    {
+      "stepId": "capture",
+      "action": "screenshot",
+      "path": "search-results.png"
+    }
+  ]
+}
+```
+
+### Available Actions
+
+Doc Detective supports many action types:
+
+<CardGroup cols={3}>
+  <Card title="Navigation" icon="compass">
+    - goTo
+    - checkLink
+  </Card>
+  <Card title="Interaction" icon="hand-pointer">
+    - find
+    - click
+    - type
+    - dragAndDrop
+  </Card>
+  <Card title="Validation" icon="check">
+    - httpRequest
+    - wait
+  </Card>
+  <Card title="Capture" icon="camera">
+    - screenshot
+    - record
+    - stopRecord
+  </Card>
+  <Card title="Execution" icon="terminal">
+    - runShell
+    - runCode
+  </Card>
+  <Card title="State" icon="database">
+    - loadVariables
+    - saveCookie
+    - loadCookie
+  </Card>
+</CardGroup>
+
+### Outputs and Variables
+
+Steps can define outputs and set variables for use in subsequent steps:
+
+```json
+{
+  "steps": [
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/user",
+      "outputs": {
+        "userId": "${{ response.body.id }}"
+      }
+    },
+    {
+      "action": "goTo",
+      "url": "https://example.com/user/${{ outputs.userId }}"
+    }
+  ]
+}
+```
+
+## Real-World Example
+
+Here's a complete example from the Doc Detective samples that demonstrates the full hierarchy:
+
+```json
+{
+  "specId": "kitten-search",
+  "tests": [
+    {
+      "testId": "duckduckgo-search",
+      "description": "Search for kittens on DuckDuckGo",
+      "steps": [
+        {
+          "stepId": "open-search-engine",
+          "action": "goTo",
+          "url": "https://www.duckduckgo.com"
+        },
+        {
+          "stepId": "enter-search-query",
+          "action": "find",
+          "selector": "#searchbox_input",
+          "click": true,
+          "typeKeys": {
+            "keys": ["American Shorthair kittens", "$ENTER$"]
+          }
+        },
+        {
+          "stepId": "verify-results",
+          "action": "find",
+          "selector": "[data-testid='web-vertical']"
+        },
+        {
+          "stepId": "capture-results",
+          "action": "screenshot",
+          "path": "search-results.png"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use descriptive IDs and descriptions">
+    Always provide meaningful `testId`, `stepId`, and `description` properties. This makes debugging easier and reports more readable.
+
+    ```json
+    {
+      "stepId": "login-form-submit",
+      "description": "Submit login form with test credentials",
+      "action": "click",
+      "selector": "button[type=submit]"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Keep tests focused and independent">
+    Each test should validate one feature or workflow. Tests should not depend on each other's state.
+  </Accordion>
+
+  <Accordion title="Use setup and cleanup wisely">
+    Leverage the `before` and `after` properties for common setup tasks like authentication, but be aware that they share the test's context.
+  </Accordion>
+
+  <Accordion title="Group related steps">
+    Organize steps logically within a test. Use step descriptions to document the purpose of each action.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Contexts" icon="desktop" href="/concepts/contexts">
+    Learn how to run tests on different platforms and browsers
+  </Card>
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Configure Doc Detective for your project
+  </Card>
+  <Card title="Writing Tests" icon="pen" href="/guides/writing-tests">
+    Detailed guide on writing effective tests
+  </Card>
+  <Card title="Actions Reference" icon="list" href="/actions/overview">
+    Complete reference for all available actions
+  </Card>
+</CardGroup>

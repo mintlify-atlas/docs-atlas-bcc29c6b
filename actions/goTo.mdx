@@ -1,0 +1,275 @@
+---
+title: goTo
+description: Navigate to HTTP or HTTPS URLs in a browser
+---
+
+The `goTo` action navigates to a specified URL and waits for the page to be ready based on configurable conditions like network idle time, DOM stability, and element presence.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple (String)
+{
+  "action": "goTo",
+  "url": "https://www.example.com"
+}
+```
+
+```json Simple (Inline)
+"https://www.example.com"
+```
+
+```json With Origin
+{
+  "action": "goTo",
+  "url": "/dashboard",
+  "origin": "https://app.example.com"
+}
+```
+
+```json With Wait Conditions
+{
+  "action": "goTo",
+  "url": "https://app.example.com",
+  "timeout": 60000,
+  "waitUntil": {
+    "networkIdleTime": 500,
+    "domIdleTime": 1000,
+    "find": {
+      "selector": "[data-testid='app-loaded']"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="url" type="string" required>
+  URL to navigate to. Can be a full URL (starting with `http://` or `https://`) or a path (starting with `/`).
+  
+  - Full URL: Navigates directly to the URL
+  - Path with `origin`: Prepends `origin` to the path
+  - Path without `origin`: Navigates relative to current URL
+  
+  Supports environment variables using `$VARIABLE_NAME` syntax.
+</ParamField>
+
+<ParamField path="origin" type="string">
+  Protocol and domain to prepend to `url`. Only used when `url` is a relative path.
+  
+  Example: `"https://app.example.com"`
+</ParamField>
+
+<ParamField path="timeout" type="integer" default="30000">
+  Maximum time in milliseconds to wait for the page to be ready. If exceeded, the action fails.
+</ParamField>
+
+<ParamField path="waitUntil" type="object">
+  Configuration for waiting conditions after navigation. All conditions must be met for the page to be considered ready.
+</ParamField>
+
+### Wait Until Options
+
+<ParamField path="waitUntil.networkIdleTime" type="integer | null" default="500">
+  Wait for network activity to be idle (no new requests) for this duration in milliseconds. Set to `null` to skip this check.
+</ParamField>
+
+<ParamField path="waitUntil.domIdleTime" type="integer | null" default="1000">
+  Wait for DOM mutations to stop for this duration in milliseconds. Set to `null` to skip this check.
+</ParamField>
+
+<ParamField path="waitUntil.find" type="object">
+  Wait for a specific element to be present in the DOM. Uses the same element finding parameters as the [find action](/actions/find):
+  - `selector`
+  - `elementText`
+  - `elementId`
+  - `elementTestId`
+  - `elementClass`
+  - `elementAttribute`
+  - `elementAria`
+</ParamField>
+
+## Examples
+
+### Navigate to a Full URL
+
+Simplest usage with a complete URL:
+
+```json
+{
+  "action": "goTo",
+  "url": "https://www.example.com"
+}
+```
+
+### Navigate to a Relative Path
+
+Combine origin with a path:
+
+```json
+{
+  "action": "goTo",
+  "url": "/api/dashboard",
+  "origin": "https://app.example.com"
+}
+```
+
+### Wait for Specific Element
+
+Ensure the page is fully loaded by waiting for a key element:
+
+```json
+{
+  "action": "goTo",
+  "url": "https://app.example.com/dashboard",
+  "waitUntil": {
+    "find": {
+      "selector": "[data-testid='dashboard-loaded']"
+    }
+  }
+}
+```
+
+### Extended Timeout for Slow Pages
+
+Increase timeout for pages that take longer to load:
+
+```json
+{
+  "action": "goTo",
+  "url": "https://slow-loading-site.com",
+  "timeout": 60000
+}
+```
+
+### Skip Network Idle Check
+
+Useful for pages with persistent connections (WebSockets, SSE):
+
+```json
+{
+  "action": "goTo",
+  "url": "https://realtime-app.com",
+  "waitUntil": {
+    "networkIdleTime": null
+  }
+}
+```
+
+### Wait for Specific Text
+
+Wait for text content to appear:
+
+```json
+{
+  "action": "goTo",
+  "url": "https://status.example.com",
+  "waitUntil": {
+    "find": {
+      "elementText": "System operational"
+    }
+  }
+}
+```
+
+### Complex Wait Conditions
+
+Combine multiple wait conditions:
+
+```json
+{
+  "action": "goTo",
+  "url": "https://app.example.com/dashboard",
+  "timeout": 60000,
+  "waitUntil": {
+    "networkIdleTime": 500,
+    "domIdleTime": 1000,
+    "find": {
+      "selector": ".main-content",
+      "elementText": "Dashboard"
+    }
+  }
+}
+```
+
+### Using Environment Variables
+
+Use variables for dynamic URLs:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "goTo",
+      "url": "$BASE_URL/login"
+    }
+  ]
+}
+```
+
+## Page Ready Criteria
+
+By default, a page is considered ready when:
+
+1. **Network is idle** for 500ms (no new requests)
+2. **DOM is stable** for 1000ms (no mutations)
+
+You can customize or disable these conditions using `waitUntil`:
+
+```json
+{
+  "waitUntil": {
+    "networkIdleTime": null,     // Skip network check
+    "domIdleTime": 2000,         // Wait 2s for DOM stability
+    "find": { ... }              // Also wait for element
+  }
+}
+```
+
+<Note>
+  All specified `waitUntil` conditions must be satisfied for navigation to complete successfully.
+</Note>
+
+## Relative Navigation
+
+When navigating to a path without `origin`, the navigation is relative to the current URL:
+
+```json
+{
+  "steps": [
+    {
+      "action": "goTo",
+      "url": "https://example.com/app"
+    },
+    {
+      "action": "goTo",
+      "url": "/dashboard"  // Goes to https://example.com/dashboard
+    }
+  ]
+}
+```
+
+## Error Handling
+
+The action fails when:
+- The page doesn't load within `timeout`
+- Wait conditions aren't met within `timeout`
+- The URL is invalid or unreachable
+- Browser navigation fails
+
+<Warning>
+  For single-page applications (SPAs) with client-side routing, you may need to adjust `waitUntil` conditions or increase the `timeout` to account for dynamic content loading.
+</Warning>
+
+## Related Actions
+
+- [checkLink](/actions/checkLink) - Verify URLs without browser navigation
+- [find](/actions/find) - Find elements after navigation
+- [wait](/actions/wait) - Add explicit waits after navigation

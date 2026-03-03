@@ -1,0 +1,301 @@
+---
+title: Installation
+description: Detailed installation instructions for Doc Detective, including prerequisites, installation methods, and troubleshooting
+---
+
+# Installation
+
+This guide covers everything you need to install and set up Doc Detective for testing your documentation.
+
+## Prerequisites
+
+<Steps>
+
+<Step title="Node.js">
+
+Doc Detective requires Node.js to run. Install Node.js before proceeding:
+
+- [Node.js](https://nodejs.org/) (tested on v20 and v22)
+
+<Tip>
+We recommend using the LTS (Long Term Support) version of Node.js for the best stability.
+</Tip>
+
+Verify your Node.js installation:
+
+```bash
+node --version
+```
+
+You should see output like:
+
+```
+v20.11.0
+```
+
+</Step>
+
+<Step title="npm (included with Node.js)">
+
+The `npm` package manager is included with Node.js. Verify it's installed:
+
+```bash
+npm --version
+```
+
+You should see output like:
+
+```
+10.2.4
+```
+
+</Step>
+
+</Steps>
+
+## Installation Methods
+
+Doc Detective can be installed globally for system-wide access or locally for project-specific use.
+
+### Global Installation (Recommended)
+
+Install Doc Detective globally to use it across all your projects:
+
+```bash
+npm i -g doc-detective
+```
+
+Verify the installation:
+
+```bash
+doc-detective --version
+```
+
+You should see the version number:
+
+```
+4.0.0-beta.1-dev.3
+```
+
+<Note>
+With global installation, you can run `doc-detective` directly without using `npx`.
+</Note>
+
+### Local Installation
+
+For project-specific installation, add Doc Detective to your project:
+
+```bash
+npm install doc-detective
+```
+
+Then run it using `npx`:
+
+```bash
+npx doc-detective
+```
+
+<Note>
+If you don't install Doc Detective globally or locally, you'll be prompted to install it the first time you run an `npx` command.
+</Note>
+
+### Development Installation
+
+If you're contributing to Doc Detective or want to run the latest development version, clone the repository:
+
+```bash
+git clone https://github.com/doc-detective/doc-detective.git
+cd doc-detective
+npm i
+```
+
+<Note>
+When working in a cloned `doc-detective` repository, run `npm i` to install local dependencies or the `npx` command will fail.
+</Note>
+
+Run commands using the same `npx` syntax:
+
+```bash
+npx doc-detective
+```
+
+## Running Your First Test
+
+After installation, verify Doc Detective is working:
+
+```bash
+npx doc-detective
+```
+
+By default, Doc Detective scans the current directory for valid tests. Since you don't have any tests yet, it will complete without running anything.
+
+<Tip>
+Head over to the [Quick Start guide](/quickstart) to create and run your first test!
+</Tip>
+
+## Command-Line Usage
+
+Doc Detective provides several command-line options:
+
+### Basic Commands
+
+<CodeGroup>
+
+```bash Run all tests in current directory
+npx doc-detective
+```
+
+```bash Run specific test file
+npx doc-detective --input tests.spec.json
+```
+
+```bash Use configuration file
+npx doc-detective --config .doc-detective.json
+```
+
+```bash Override config with CLI arguments
+npx doc-detective --config .doc-detective.json --input tests.spec.json
+```
+
+</CodeGroup>
+
+### Common Options
+
+- `--input <path>`: Specify a test file or directory
+- `--config <path>`: Specify a configuration file
+- `--version`: Display the version number
+- `--help`: Show help information
+
+<Note>
+All paths are relative to the current working directory, regardless of where the config file is located.
+</Note>
+
+## Project Structure
+
+A typical Doc Detective project structure:
+
+```
+my-docs-project/
+├── .doc-detective.json    # Configuration file
+├── tests/
+│   ├── ui-tests.spec.json
+│   ├── api-tests.spec.json
+│   └── shell-tests.spec.json
+├── docs/
+│   ├── getting-started.md
+│   └── tutorials.md
+└── screenshots/           # Generated screenshots
+```
+
+## Configuration File
+
+Create a `.doc-detective.json` file in your project root to customize Doc Detective's behavior:
+
+```json .doc-detective.json
+{
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": false
+        }
+      ]
+    }
+  ],
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"]
+    }
+  ]
+}
+```
+
+When a `.doc-detective.json` file exists in the directory, Doc Detective automatically loads it. You can also specify a different config file:
+
+```bash
+npx doc-detective --config path/to/config.json
+```
+
+## Troubleshooting
+
+### Command Not Found
+
+If you get a "command not found" error:
+
+1. Verify Node.js is installed: `node --version`
+2. Verify npm is installed: `npm --version`
+3. Try reinstalling Doc Detective: `npm i -g doc-detective`
+
+### Permission Errors
+
+If you encounter permission errors during global installation:
+
+<CodeGroup>
+
+```bash macOS/Linux
+sudo npm i -g doc-detective
+```
+
+```bash Windows (Run as Administrator)
+npm i -g doc-detective
+```
+
+</CodeGroup>
+
+<Tip>
+Consider using a Node version manager like [nvm](https://github.com/nvm-sh/nvm) to avoid permission issues.
+</Tip>
+
+### Browser Issues
+
+If tests fail to launch a browser:
+
+1. Doc Detective will automatically download required browser drivers
+2. Make sure you have the browser installed (Chrome, Firefox, or Safari)
+3. Try running with `headless: false` in your config to see what's happening
+
+### Module Not Found
+
+If you're working in a cloned repository and get module errors:
+
+```bash
+cd doc-detective
+npm i
+```
+
+## Next Steps
+
+Now that Doc Detective is installed, you're ready to start testing:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Run your first test in minutes
+  </Card>
+  <Card title="Test Actions" icon="list-check" href="/actions/overview">
+    Learn about available test actions
+  </Card>
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Explore configuration options
+  </Card>
+  <Card title="Examples" icon="folder" href="https://github.com/doc-detective/doc-detective/tree/main/samples">
+    Browse sample tests and configs
+  </Card>
+</CardGroup>
+
+## Package Information
+
+- **Package Name**: `doc-detective`
+- **Current Version**: `4.0.0-beta.1-dev.3`
+- **NPM**: [npmjs.com/package/doc-detective](https://www.npmjs.com/package/doc-detective)
+- **GitHub**: [github.com/doc-detective/doc-detective](https://github.com/doc-detective/doc-detective)
+- **Documentation**: [doc-detective.com](https://doc-detective.com)
+- **License**: AGPL-3.0-only
+
+## Need Help?
+
+- **Discord**: Join the [Doc Detective Discord](https://discord.gg/2M7wXEThfF) community
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/doc-detective/doc-detective/issues)
+- **Contributions**: See the [contributions guide](https://github.com/doc-detective/doc-detective/blob/master/CONTRIBUTIONS.md)

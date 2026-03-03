@@ -1,0 +1,382 @@
+---
+title: httpRequest
+description: Perform HTTP requests with full request/response validation
+---
+
+The `httpRequest` action performs HTTP requests to APIs or web services with comprehensive request configuration and response validation. It supports all standard HTTP methods, request/response body validation, OpenAPI integration, and variable extraction.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple GET
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users"
+}
+```
+
+```json POST with Body
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users",
+  "method": "post",
+  "request": {
+    "body": {
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  }
+}
+```
+
+```json With Response Validation
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users/1",
+  "response": {
+    "body": {
+      "id": 1,
+      "name": "John Doe"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="url" type="string" required>
+  URL for the HTTP request. Must start with `http://` or `https://`.
+  
+  Supports environment variables using `$VARIABLE_NAME` syntax.
+</ParamField>
+
+<ParamField path="method" type="string" default="get">
+  HTTP method to use.
+  
+  Options: `"get"`, `"post"`, `"put"`, `"patch"`, `"delete"`
+</ParamField>
+
+<ParamField path="statusCodes" type="integer[]" default="[200, 201]">
+  Accepted status codes. If the response code is not in this list, the action fails.
+</ParamField>
+
+<ParamField path="timeout" type="integer" default="60000">
+  Timeout for the HTTP request in milliseconds.
+</ParamField>
+
+<ParamField path="request" type="object">
+  Request configuration including headers, parameters, and body.
+</ParamField>
+
+<ParamField path="response" type="object">
+  Expected response to validate against. Used for response verification.
+</ParamField>
+
+<ParamField path="variables" type="object">
+  Extract values from the response and save them as variables for use in subsequent steps.
+</ParamField>
+
+<ParamField path="savePath" type="string">
+  File path to save the response, relative to the media directory.
+</ParamField>
+
+<ParamField path="maxVariation" type="number" default="0">
+  Allowed variation as a fraction (0 to 1) between current response and saved response. For example, `0.1` means 10% difference is acceptable.
+</ParamField>
+
+<ParamField path="overwrite" type="string" default="aboveVariation">
+  When to overwrite saved response.
+  
+  Options: `"true"`, `"false"`, `"aboveVariation"`
+</ParamField>
+
+### Request Object
+
+<ParamField path="request.headers" type="object | string">
+  Headers to include in the request. Can be an object with key-value pairs or a string with newline-separated headers.
+</ParamField>
+
+<ParamField path="request.parameters" type="object">
+  URL parameters to include in the request as key-value pairs.
+</ParamField>
+
+<ParamField path="request.body" type="object | string">
+  Body of the HTTP request. Can be an object (automatically serialized to JSON) or a string.
+</ParamField>
+
+### Response Object
+
+<ParamField path="response.headers" type="object">
+  Expected response headers to validate.
+</ParamField>
+
+<ParamField path="response.body" type="object | string">
+  Expected response body to validate against.
+</ParamField>
+
+## Examples
+
+### Simple GET Request
+
+Basic API call:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users"
+}
+```
+
+### POST with JSON Body
+
+Create a new resource:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users",
+  "method": "post",
+  "request": {
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "role": "admin"
+    }
+  },
+  "statusCodes": [201]
+}
+```
+
+### Request with URL Parameters
+
+Add query parameters:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/search",
+  "request": {
+    "parameters": {
+      "q": "kittens",
+      "limit": 10,
+      "page": 1
+    }
+  }
+}
+```
+
+### Validate Response Body
+
+Ensure response matches expected data:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users/1",
+  "response": {
+    "body": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  }
+}
+```
+
+### Extract Variables from Response
+
+Capture response data for later use:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/users",
+  "method": "post",
+  "request": {
+    "body": {
+      "name": "New User"
+    }
+  },
+  "variables": {
+    "USER_ID": "$$response.body.id",
+    "USER_EMAIL": "$$response.body.email"
+  }
+}
+```
+
+### Use Extracted Variables
+
+Reference variables in subsequent requests:
+
+```json
+{
+  "steps": [
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/users",
+      "method": "post",
+      "request": {
+        "body": { "name": "Test User" }
+      },
+      "variables": {
+        "USER_ID": "$$response.body.id"
+      }
+    },
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/users/$USER_ID"
+    }
+  ]
+}
+```
+
+### Authentication Headers
+
+Include authorization:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/protected",
+  "request": {
+    "headers": {
+      "Authorization": "Bearer $API_TOKEN"
+    }
+  }
+}
+```
+
+### Save and Compare Responses
+
+Save response and compare on future runs:
+
+```json
+{
+  "action": "httpRequest",
+  "url": "https://api.example.com/config",
+  "savePath": "config-response.json",
+  "maxVariation": 0,
+  "overwrite": "aboveVariation"
+}
+```
+
+### Complete API Test Flow
+
+From the samples directory:
+
+```yaml
+tests:
+- steps:
+  - loadVariables: env
+  - httpRequest:
+      url: http://localhost:8092/api/users
+      method: post
+      request:
+        body:
+          name: $USER
+          job: $JOB
+      response:
+        body:
+          name: John Doe
+          job: Software Engineer
+  - httpRequest:
+      url: http://localhost:8092/api/users
+      method: post
+      request:
+        body:
+          data:
+            - first_name: George
+              last_name: Bluth
+              id: 1
+      response:
+        body:
+          data:
+            - first_name: George
+              last_name: Bluth
+    variables:
+      ID: $$response.body.data[0].id
+  - httpRequest:
+      url: http://localhost:8092/api/$ID
+      method: get
+      timeout: 1000
+    savePath: response.json
+    maxVariation: 0
+    overwrite: aboveVariation
+```
+
+## Variable Syntax
+
+Two types of variables are supported:
+
+### Environment Variables
+
+Use `$VARIABLE_NAME` to reference environment variables loaded via [loadVariables](/actions/loadVariables):
+
+```json
+{
+  "url": "$API_URL/users",
+  "request": {
+    "headers": {
+      "Authorization": "Bearer $API_TOKEN"
+    }
+  }
+}
+```
+
+### Response Variables
+
+Use `$$response.path.to.value` to extract values from the current response:
+
+```json
+{
+  "variables": {
+    "USER_ID": "$$response.body.id",
+    "FIRST_NAME": "$$response.body.data[0].first_name"
+  }
+}
+```
+
+<Note>
+  Response variables are extracted after the request completes and before validation. Extracted variables become environment variables for subsequent steps.
+</Note>
+
+## Response Validation
+
+When a `response` object is provided, the actual response is validated against it:
+
+- **Exact match**: Simple values must match exactly
+- **Partial match**: Objects are validated for specified fields only (extra fields in response are ignored)
+- **Array match**: Arrays must have matching length and element values
+
+```json
+{
+  "response": {
+    "body": {
+      "id": 1,           // Must be exactly 1
+      "name": "John"     // Must be exactly "John"
+      // Other fields in response are ignored
+    }
+  }
+}
+```
+
+## Error Handling
+
+The action fails when:
+- Response status code is not in `statusCodes`
+- Request times out
+- Response validation fails
+- Network error occurs
+- Variation exceeds `maxVariation`
+
+## Related Actions
+
+- [checkLink](/actions/checkLink) - Simple URL availability check
+- [loadVariables](/actions/loadVariables) - Load environment variables
+- [runShell](/actions/runShell) - Execute shell commands for API testing

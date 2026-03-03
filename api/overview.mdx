@@ -1,0 +1,248 @@
+---
+title: Programmatic API Overview
+description: Use Doc Detective's programmatic API to integrate test execution into your Node.js applications and custom workflows
+---
+
+The Doc Detective programmatic API provides a set of functions for integrating documentation testing directly into your Node.js applications and custom workflows. Instead of using the CLI, you can import and call these functions to detect, resolve, and run tests programmatically.
+
+## Installation
+
+Install Doc Detective as a dependency in your Node.js project:
+
+```bash
+npm install doc-detective
+```
+
+## Main Functions
+
+The API exposes several key functions for working with documentation tests:
+
+- **[runTests()](/api/runTests)** - Execute tests with a given configuration
+- **[detectTests()](/api/detectTests)** - Discover and parse tests from input files
+- **[resolveTests()](/api/resolveTests)** - Transform detected tests into resolved specifications ready for execution
+
+## Basic Usage
+
+### Running Tests
+
+The most common use case is to run tests programmatically:
+
+<CodeGroup>
+```javascript JavaScript
+const { runTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown']
+};
+
+const results = await runTests(config);
+console.log('Test results:', results);
+```
+
+```typescript TypeScript
+import { runTests } from 'doc-detective';
+
+const config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown']
+};
+
+const results = await runTests(config);
+console.log('Test results:', results);
+```
+</CodeGroup>
+
+### Detecting and Resolving Tests
+
+For advanced workflows, you can separate test detection and resolution from execution:
+
+<CodeGroup>
+```javascript JavaScript
+const { detectTests, resolveTests, runTests } = require('doc-detective');
+
+// First, set up the config
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+// Detect tests from files
+const detectedTests = await detectTests({ config });
+console.log(`Found ${detectedTests.length} test specifications`);
+
+// Resolve tests to prepare for execution
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// Run the resolved tests
+const results = await runTests(config, { resolvedTests });
+console.log('Test results:', results);
+```
+
+```typescript TypeScript
+import { detectTests, resolveTests, runTests } from 'doc-detective';
+
+// First, set up the config
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+// Detect tests from files
+const detectedTests = await detectTests({ config });
+console.log(`Found ${detectedTests.length} test specifications`));
+
+// Resolve tests to prepare for execution
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// Run the resolved tests
+const results = await runTests(config, { resolvedTests });
+console.log('Test results:', results);
+```
+</CodeGroup>
+
+## Configuration
+
+All API functions accept a configuration object that follows the [config schema](https://doc-detective.com/docs/references/schemas/config.html). Key configuration options include:
+
+- `input` - Path(s) to test specifications and documentation source files
+- `output` - Directory for storing test output
+- `recursive` - Whether to search input paths recursively
+- `fileTypes` - File types to process (e.g., 'markdown', 'html', 'dita')
+- `detectSteps` - Whether to detect test steps from markup
+- `runOn` - Contexts (platforms/browsers) to run tests in
+- `logLevel` - Amount of detail in logs ('silent', 'error', 'warning', 'info', 'debug')
+
+## Use Cases
+
+### Custom CI/CD Integration
+
+Integrate Doc Detective into your CI/CD pipeline with custom error handling:
+
+```javascript
+const { runTests } = require('doc-detective');
+
+const config = {
+  input: process.env.DOCS_PATH || './docs',
+  output: './test-results',
+  logLevel: 'info'
+};
+
+try {
+  const results = await runTests(config);
+  
+  // Check for failures
+  const failed = results.specs.some(spec => 
+    spec.tests.some(test => test.status === 'FAIL')
+  );
+  
+  if (failed) {
+    console.error('Some tests failed');
+    process.exit(1);
+  }
+  
+  console.log('All tests passed');
+} catch (error) {
+  console.error('Error running tests:', error);
+  process.exit(1);
+}
+```
+
+### Pre-Publishing Validation
+
+Validate documentation before publishing:
+
+```javascript
+const { detectTests } = require('doc-detective');
+
+const config = {
+  input: './docs/draft',
+  fileTypes: ['markdown'],
+  detectSteps: true
+};
+
+const tests = await detectTests({ config });
+
+if (!tests || tests.length === 0) {
+  console.warn('No tests detected in documentation');
+} else {
+  console.log(`Detected ${tests.length} test specifications`);
+  
+  // Count total test steps
+  const totalSteps = tests.reduce((sum, spec) => {
+    return sum + spec.tests.reduce((testSum, test) => {
+      return testSum + (test.steps?.length || 0);
+    }, 0);
+  }, 0);
+  
+  console.log(`Total test steps: ${totalSteps}`);
+}
+```
+
+### Selective Test Execution
+
+Detect tests and selectively run only specific specs:
+
+```javascript
+const { detectTests, resolveTests, runTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  recursive: true,
+  fileTypes: ['markdown']
+};
+
+// Detect all tests
+const allTests = await detectTests({ config });
+
+// Filter to only API documentation tests
+const apiTests = allTests.filter(spec => 
+  spec.contentPath && spec.contentPath.includes('/api/')
+);
+
+// Resolve and run only API tests
+const resolvedTests = await resolveTests({ 
+  config, 
+  detectedTests: apiTests 
+});
+
+const results = await runTests(config, { resolvedTests });
+console.log(`Ran ${apiTests.length} API test specifications`);
+```
+
+## Return Values
+
+All functions return promises. The return value structure varies by function:
+
+- `runTests()` returns a [results object](https://doc-detective.com/docs/references/schemas/report.html) with test outcomes
+- `detectTests()` returns an array of [test specifications](https://doc-detective.com/docs/references/schemas/spec.html)
+- `resolveTests()` returns a [resolved tests object](https://doc-detective.com/docs/references/schemas/resolvedTests.html) with specs ready for execution
+
+## Error Handling
+
+All API functions handle errors gracefully:
+
+- Invalid configurations are validated and will cause functions to throw errors
+- Missing or inaccessible files are logged as warnings
+- Test execution failures are captured in the results object, not thrown as exceptions
+
+```javascript
+try {
+  const results = await runTests(config);
+  // results will contain pass/fail status for each test
+} catch (error) {
+  // Only thrown for configuration errors or fatal issues
+  console.error('Fatal error:', error.message);
+}
+```
+
+## Next Steps
+
+- Learn about [runTests()](/api/runTests) for executing tests
+- Learn about [detectTests()](/api/detectTests) for discovering tests
+- Learn about [resolveTests()](/api/resolveTests) for preparing tests for execution
+- Review the [configuration schema](https://doc-detective.com/docs/references/schemas/config.html) for all available options

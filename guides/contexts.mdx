@@ -1,0 +1,703 @@
+---
+title: Contexts for Multi-Platform Testing
+description: Run tests across multiple platforms, browsers, and configurations to ensure your documentation works everywhere
+---
+
+Contexts allow you to run the same tests across different platforms, browsers, and configurations. This ensures your documentation works correctly for all users, regardless of their environment.
+
+## What Are Contexts?
+
+A context defines the environment in which a test runs:
+
+- **Platform**: Operating system (Windows, macOS, Linux)
+- **Browser**: Web browser and its configuration
+- **Viewport**: Browser window dimensions
+- **Other settings**: Headless mode, user agent, etc.
+
+## Why Use Contexts?
+
+Your users access documentation from different environments. Contexts help you:
+
+- Test cross-platform compatibility
+- Verify responsive designs
+- Catch platform-specific issues
+- Ensure consistency across browsers
+- Validate mobile experiences
+
+## Defining Contexts
+
+Contexts can be defined at three levels:
+
+1. **Config level**: Default for all tests
+2. **Spec level**: Default for all tests in a spec
+3. **Test level**: Specific to one test
+
+### Basic Context
+
+<Tabs>
+  <Tab title="Config Level">
+    In `.doc-detective.json`:
+
+    ```json
+    {
+      "runOn": [
+        {
+          "platforms": ["windows", "mac", "linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true
+            }
+          ]
+        }
+      ]
+    }
+    ```
+  </Tab>
+
+  <Tab title="Spec Level">
+    In your `.spec.json` file:
+
+    ```json
+    {
+      "specId": "my-spec",
+      "runOn": [
+        {
+          "platforms": ["linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true
+            }
+          ]
+        }
+      ],
+      "tests": [/* ... */]
+    }
+    ```
+  </Tab>
+
+  <Tab title="Test Level">
+    In your test object:
+
+    ```json
+    {
+      "tests": [
+        {
+          "testId": "my-test",
+          "runOn": [
+            {
+              "platforms": ["mac"],
+              "browsers": [
+                {
+                  "name": "chrome",
+                  "headless": false
+                }
+              ]
+            }
+          ],
+          "steps": [/* ... */]
+        }
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Platform Configuration
+
+### Supported Platforms
+
+<CardGroup cols={3}>
+  <Card title="Windows" icon="windows">
+    ```json
+    "platforms": ["windows"]
+    ```
+  </Card>
+  
+  <Card title="macOS" icon="apple">
+    ```json
+    "platforms": ["mac"]
+    ```
+  </Card>
+  
+  <Card title="Linux" icon="linux">
+    ```json
+    "platforms": ["linux"]
+    ```
+  </Card>
+</CardGroup>
+
+### Multiple Platforms
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"]
+    }
+  ]
+}
+```
+
+<Warning>
+Tests only run on platforms where the current OS matches. To test all platforms, run Doc Detective on each OS (e.g., in CI/CD with matrix builds).
+</Warning>
+
+## Browser Configuration
+
+### Supported Browsers
+
+<Tabs>
+  <Tab title="Firefox">
+    ```json
+    {
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true
+        }
+      ]
+    }
+    ```
+  </Tab>
+
+  <Tab title="Chrome">
+    ```json
+    {
+      "browsers": [
+        {
+          "name": "chrome",
+          "headless": true
+        }
+      ]
+    }
+    ```
+  </Tab>
+
+  <Tab title="Safari">
+    ```json
+    {
+      "browsers": [
+        {
+          "name": "safari",
+          "headless": false
+        }
+      ]
+    }
+    ```
+
+    Safari doesn't support headless mode.
+  </Tab>
+
+  <Tab title="Edge">
+    ```json
+    {
+      "browsers": [
+        {
+          "name": "edge",
+          "headless": true
+        }
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Browser Options
+
+<ParamField path="name" type="string" required>
+  Browser name: `"firefox"`, `"chrome"`, `"safari"`, `"edge"`
+</ParamField>
+
+<ParamField path="headless" type="boolean" default="false">
+  Run browser in headless mode (no GUI).
+
+  ```json
+  "headless": true
+  ```
+</ParamField>
+
+<ParamField path="viewport" type="object">
+  Browser window dimensions.
+
+  ```json
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  }
+  ```
+</ParamField>
+
+## Multiple Contexts
+
+Test across multiple contexts by defining multiple `runOn` entries:
+
+```json
+{
+  "tests": [
+    {
+      "testId": "cross-browser-test",
+      "runOn": [
+        {
+          "platforms": ["windows", "linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true
+            }
+          ]
+        },
+        {
+          "platforms": ["mac"],
+          "browsers": [
+            {
+              "name": "chrome",
+              "headless": true
+            },
+            {
+              "name": "safari",
+              "headless": false
+            }
+          ]
+        }
+      ],
+      "steps": [/* ... */]
+    }
+  ]
+}
+```
+
+This test runs:
+- On Windows and Linux with Firefox
+- On macOS with both Chrome and Safari
+
+## Context Examples
+
+### Desktop Testing
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true,
+          "viewport": {
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Mobile Viewport
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": ["linux"],
+      "browsers": [
+        {
+          "name": "chrome",
+          "headless": true,
+          "viewport": {
+            "width": 375,
+            "height": 667
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### CI/CD Environment
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": ["linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Local Development
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": ["mac"],
+      "browsers": [
+        {
+          "name": "chrome",
+          "headless": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Platform-Specific Tests
+
+Some features only work on certain platforms. Use contexts to run tests conditionally:
+
+```json
+{
+  "specId": "platform-specific-tests",
+  "tests": [
+    {
+      "testId": "windows-only",
+      "description": "Test Windows-specific features",
+      "runOn": [
+        {
+          "platforms": ["windows"],
+          "browsers": [{ "name": "edge", "headless": true }]
+        }
+      ],
+      "steps": [
+        {
+          "action": "runShell",
+          "command": "powershell",
+          "args": ["-Command", "Get-Process"]
+        }
+      ]
+    },
+    {
+      "testId": "macos-only",
+      "description": "Test macOS-specific features",
+      "runOn": [
+        {
+          "platforms": ["mac"],
+          "browsers": [{ "name": "safari", "headless": false }]
+        }
+      ],
+      "steps": [
+        {
+          "action": "runShell",
+          "command": "osascript",
+          "args": ["-e", "display notification \"Test\""] 
+        }
+      ]
+    },
+    {
+      "testId": "linux-docker",
+      "description": "Test Docker on Linux",
+      "runOn": [
+        {
+          "platforms": ["linux"],
+          "browsers": [{ "name": "firefox", "headless": true }]
+        }
+      ],
+      "steps": [
+        {
+          "action": "runShell",
+          "command": "docker",
+          "args": ["run", "hello-world"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Context Resolution
+
+Doc Detective resolves contexts using this precedence (highest to lowest):
+
+<Steps>
+  <Step title="Test-level runOn">
+    Overrides all other configurations:
+
+    ```json
+    {
+      "testId": "my-test",
+      "runOn": [/* test-specific contexts */]
+    }
+    ```
+  </Step>
+
+  <Step title="Spec-level runOn">
+    Applies to all tests in the spec if test doesn't define `runOn`:
+
+    ```json
+    {
+      "specId": "my-spec",
+      "runOn": [/* spec-default contexts */],
+      "tests": [/* ... */]
+    }
+    ```
+  </Step>
+
+  <Step title="Config-level runOn">
+    Global default in `.doc-detective.json`:
+
+    ```json
+    {
+      "runOn": [/* global default contexts */]
+    }
+    ```
+  </Step>
+
+  <Step title="Default context">
+    If no `runOn` is defined anywhere, Doc Detective uses:
+
+    ```json
+    {
+      "platforms": ["current OS"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": false
+        }
+      ]
+    }
+    ```
+  </Step>
+</Steps>
+
+## Context Results
+
+Each context produces its own test result. When running a test in multiple contexts:
+
+```json
+{
+  "testId": "multi-context",
+  "runOn": [
+    { "platforms": ["linux"], "browsers": [{ "name": "firefox" }] },
+    { "platforms": ["mac"], "browsers": [{ "name": "chrome" }] }
+  ]
+}
+```
+
+Test results include:
+
+```json
+{
+  "tests": [
+    {
+      "testId": "multi-context",
+      "contexts": [
+        {
+          "contextId": "...",
+          "platform": "linux",
+          "browser": { "name": "firefox" },
+          "result": "PASS",
+          "steps": [/* ... */]
+        },
+        {
+          "contextId": "...",
+          "platform": "mac",
+          "browser": { "name": "chrome" },
+          "result": "PASS",
+          "steps": [/* ... */]
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Testing Responsive Designs
+
+Test your documentation at different viewport sizes:
+
+```json
+{
+  "tests": [
+    {
+      "testId": "responsive-test",
+      "runOn": [
+        {
+          "platforms": ["linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true,
+              "viewport": { "width": 1920, "height": 1080 }
+            }
+          ]
+        },
+        {
+          "platforms": ["linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true,
+              "viewport": { "width": 768, "height": 1024 }
+            }
+          ]
+        },
+        {
+          "platforms": ["linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true,
+              "viewport": { "width": 375, "height": 667 }
+            }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://example.com"
+        },
+        {
+          "action": "find",
+          "selector": ".main-nav"
+        },
+        {
+          "action": "saveScreenshot",
+          "path": "responsive-test.png"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## CI/CD Matrix Testing
+
+In GitHub Actions, test across multiple platforms:
+
+```yaml
+name: Test Docs
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      
+      - run: npm install
+      - run: npx doc-detective --config .doc-detective.json
+```
+
+With a config that runs on the current platform:
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start with one platform" icon="flag-checkered">
+    Get tests working on your primary platform first, then expand to others.
+  </Card>
+
+  <Card title="Use headless in CI" icon="eye-slash">
+    Set `headless: true` for CI/CD environments to avoid display issues.
+  </Card>
+
+  <Card title="Test common viewports" icon="mobile-screen">
+    Cover desktop (1920x1080), tablet (768x1024), and mobile (375x667) sizes.
+  </Card>
+
+  <Card title="Group related contexts" icon="layer-group">
+    Keep similar contexts together in your `runOn` arrays for better organization.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tests not running in expected context">
+    - Check context precedence: test > spec > config
+    - Verify platform name matches current OS
+    - Ensure browser is installed on the system
+    - Run with `--logLevel debug` to see context resolution
+  </Accordion>
+
+  <Accordion title="Browser not launching">
+    - Verify the browser is installed
+    - Check browser name spelling: `"firefox"`, `"chrome"`, `"safari"`, `"edge"`
+    - Try without headless mode first
+    - Check for browser driver issues
+  </Accordion>
+
+  <Accordion title="Different results across platforms">
+    - Check for platform-specific selectors or behavior
+    - Verify timing issues (add waits if needed)
+    - Look for differences in browser versions
+    - Review screenshots from each platform
+  </Accordion>
+
+  <Accordion title="Safari-specific issues">
+    - Safari doesn't support headless mode
+    - Safari requires additional permissions on macOS
+    - Use Safari Technology Preview for testing
+    - Enable automation in Safari's Develop menu
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+**Common Pitfalls**
+
+- Forgetting that tests only run on matching platforms
+- Using headless mode with Safari (not supported)
+- Not testing across viewports for responsive designs
+- Assuming browser behavior is identical across platforms
+- Using platform-specific shell commands without proper contexts
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CI/CD Integration" href="/guides/ci-cd" icon="rocket">
+    Automate multi-platform testing in CI/CD pipelines
+  </Card>
+  
+  <Card title="Configuration" href="/guides/configuration" icon="gear">
+    Learn more about configuration options
+  </Card>
+  
+  <Card title="Writing Tests" href="/guides/writing-tests" icon="file-code">
+    Create effective test specifications
+  </Card>
+  
+  <Card title="Schema Reference" href="/schemas/context" icon="book">
+    Complete schema documentation
+  </Card>
+</CardGroup>

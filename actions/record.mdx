@@ -1,0 +1,564 @@
+---
+title: record / stopRecord
+description: Record browser viewport as video in MP4, WebM, or GIF format
+---
+
+The `record` and `stopRecord` actions work together to capture video recordings of browser sessions. Recording starts with `record` and stops with `stopRecord`, creating a video file in MP4, WebM, or GIF format.
+
+<Warning>
+  Recording only works in Chrome browsers when they are visible (not headless). The browser window must remain visible during recording.
+</Warning>
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple Recording
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "test-recording.mp4"
+    },
+    // ... test steps ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+```json With Directory
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "session.mp4",
+      "directory": "recordings"
+    },
+    // ... test steps ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+```json GIF Format
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "demo.gif"
+    },
+    // ... test steps ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+</CodeGroup>
+
+## record Parameters
+
+<ParamField path="path" type="string">
+  File path of the recording. Supports `.mp4`, `.webm`, and `.gif` extensions.
+  
+  If not specified, the file name is the step ID, and the extension is `.mp4`.
+</ParamField>
+
+<ParamField path="directory" type="string">
+  Directory for the recording file. If the directory doesn't exist, it's created.
+  
+  If not specified, uses the media directory.
+</ParamField>
+
+<ParamField path="overwrite" type="string">
+  Whether to overwrite an existing recording at `path`.
+  
+  Options: `"true"`, `"false"`
+</ParamField>
+
+## stopRecord Parameters
+
+The `stopRecord` action takes no parameters. Simply set it to `true` or include it as an action:
+
+```json
+{
+  "action": "stopRecord"
+}
+```
+
+Or:
+
+```json
+true
+```
+
+## Supported Formats
+
+### MP4 (Default)
+Best for most use cases:
+- Wide compatibility
+- Good compression
+- Smooth playback
+
+```json
+{
+  "action": "record",
+  "path": "test.mp4"
+}
+```
+
+### WebM
+Web-optimized format:
+- Smaller file sizes
+- Good for web embedding
+- Modern browser support
+
+```json
+{
+  "action": "record",
+  "path": "test.webm"
+}
+```
+
+### GIF
+Animated image format:
+- Universal compatibility
+- Easy embedding
+- Larger file sizes
+- No audio
+
+```json
+{
+  "action": "record",
+  "path": "demo.gif"
+}
+```
+
+## Examples
+
+### Basic Recording
+
+Record a simple test flow:
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "record",
+          "path": "login-flow.mp4"
+        },
+        {
+          "action": "goTo",
+          "url": "https://app.example.com/login"
+        },
+        {
+          "action": "find",
+          "selector": "#username",
+          "click": true,
+          "type": { "keys": "user@example.com" }
+        },
+        {
+          "action": "find",
+          "selector": "#password",
+          "click": true,
+          "type": { "keys": "password123" }
+        },
+        {
+          "action": "click",
+          "elementText": "Sign In"
+        },
+        {
+          "action": "stopRecord"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Organized Recordings
+
+Store recordings in a dedicated directory:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "checkout-process.mp4",
+      "directory": "test-recordings/e2e"
+    },
+    // ... checkout steps ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+### Create GIF Demo
+
+Generate shareable GIF:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "feature-demo.gif",
+      "directory": "demos"
+    },
+    {
+      "action": "goTo",
+      "url": "https://app.example.com"
+    },
+    {
+      "action": "find",
+      "selector": "#new-feature-btn",
+      "click": true
+    },
+    {
+      "action": "wait",
+      "duration": 2000
+    },
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+### Always Overwrite
+
+Replace existing recording:
+
+```json
+{
+  "action": "record",
+  "path": "latest-run.mp4",
+  "overwrite": "true"
+}
+```
+
+### Prevent Overwrite
+
+Fail if file exists:
+
+```json
+{
+  "action": "record",
+  "path": "baseline-recording.mp4",
+  "overwrite": "false"
+}
+```
+
+### Record Search Flow
+
+From the samples:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "search-demo.mp4"
+    },
+    {
+      "action": "goTo",
+      "url": "https://www.duckduckgo.com"
+    },
+    {
+      "action": "find",
+      "selector": "#searchbox_input",
+      "click": true,
+      "type": {
+        "keys": ["American Shorthair kittens", "$ENTER$"]
+      }
+    },
+    {
+      "action": "find",
+      "selector": "[data-testid='web-vertical']"
+    },
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+## Recording Requirements
+
+<Warning>
+  Recording has specific requirements:
+  
+  1. **Browser**: Must be Chrome (Chromium-based)
+  2. **Visibility**: Browser must be visible (not headless)
+  3. **Platform**: Works on Windows, macOS, and Linux
+  4. **Pairing**: Every `record` must have a corresponding `stopRecord`
+</Warning>
+
+### Browser Configuration
+
+Ensure Chrome is used and visible:
+
+```json
+{
+  "contexts": [
+    {
+      "app": {
+        "name": "chrome",
+        "options": {
+          "headless": false
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "steps": [
+        { "action": "record", "path": "test.mp4" },
+        // ... steps ...
+        { "action": "stopRecord" }
+      ]
+    }
+  ]
+}
+```
+
+## Recording Workflow
+
+1. **Start recording** with `record` action
+2. **Perform test steps** - all browser interactions are captured
+3. **Stop recording** with `stopRecord` action
+4. **Video is saved** to specified path
+
+```json
+{
+  "steps": [
+    { "action": "record", "path": "flow.mp4" },
+    { "action": "goTo", "url": "https://example.com" },
+    { "action": "click", "selector": "#button" },
+    { "action": "wait", "duration": 1000 },
+    { "action": "stopRecord" }
+  ]
+}
+```
+
+## Common Use Cases
+
+### Documentation
+
+Create visual guides:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "user-guide.gif",
+      "directory": "docs/videos"
+    },
+    // ... demonstrate feature ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+### Bug Reports
+
+Capture issues:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "bug-reproduction.mp4",
+      "directory": "bug-reports"
+    },
+    // ... reproduce bug ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+### Onboarding Videos
+
+Generate training materials:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "onboarding-part1.mp4",
+      "directory": "training"
+    },
+    // ... show onboarding flow ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+### Test Evidence
+
+Capture test execution:
+
+```json
+{
+  "steps": [
+    {
+      "action": "record",
+      "path": "test-execution-${TEST_ID}.mp4",
+      "directory": "test-artifacts"
+    },
+    // ... run tests ...
+    {
+      "action": "stopRecord"
+    }
+  ]
+}
+```
+
+## Best Practices
+
+### Keep Recordings Short
+
+Break long tests into segments:
+
+```json
+{
+  "steps": [
+    // Segment 1
+    { "action": "record", "path": "part1-login.mp4" },
+    // ... login steps ...
+    { "action": "stopRecord" },
+    
+    // Segment 2
+    { "action": "record", "path": "part2-search.mp4" },
+    // ... search steps ...
+    { "action": "stopRecord" }
+  ]
+}
+```
+
+### Use Descriptive Names
+
+```json
+// Good
+{ "path": "checkout-credit-card-payment.mp4" }
+
+// Avoid
+{ "path": "recording1.mp4" }
+```
+
+### Choose Appropriate Format
+
+- **MP4**: General purpose, test evidence
+- **WebM**: Web documentation, smaller files
+- **GIF**: Quick demos, embedding in docs (no sound needed)
+
+### Add Wait for Visibility
+
+Ensure important elements are visible:
+
+```json
+{
+  "steps": [
+    { "action": "record", "path": "demo.mp4" },
+    { "action": "click", "selector": "#modal-trigger" },
+    { "action": "wait", "duration": 500 },  // Let animation complete
+    { "action": "screenshot", "path": "modal.png" },
+    { "action": "stopRecord" }
+  ]
+}
+```
+
+## Troubleshooting
+
+### Recording Not Working
+
+**Issue**: Recording doesn't start or file isn't created
+
+**Solutions**:
+1. Verify Chrome browser is used
+2. Ensure browser is visible (headless: false)
+3. Check file path is valid
+4. Verify write permissions for directory
+
+### Recording is Blank
+
+**Issue**: Video is created but shows blank screen
+
+**Solutions**:
+1. Ensure `goTo` action navigates to a page
+2. Check browser window is visible on screen
+3. Verify actions between record and stopRecord
+
+### File Size Too Large
+
+**Issue**: Recording files are very large
+
+**Solutions**:
+1. Use WebM format instead of MP4
+2. Reduce recording duration
+3. Split into multiple shorter recordings
+4. Avoid recording long wait periods
+
+### stopRecord Not Found
+
+**Issue**: Error about missing stopRecord
+
+**Solution**:
+Ensure every `record` has a matching `stopRecord`:
+
+```json
+{
+  "steps": [
+    { "action": "record", "path": "test.mp4" },
+    // ... steps ...
+    { "action": "stopRecord" }  // Required!
+  ]
+}
+```
+
+## Error Handling
+
+The actions fail when:
+- `record`: Browser is not Chrome or is headless
+- `record`: File already exists and `overwrite` is `"false"`
+- `record`: Invalid file path or directory
+- `stopRecord`: No active recording to stop
+- Either: Required browser features not available
+
+<Note>
+  If a test fails between `record` and `stopRecord`, the recording is automatically stopped and saved.
+</Note>
+
+## Limitations
+
+- **Chrome only**: Firefox, Safari, and Edge are not supported for recording
+- **Visible only**: Cannot record in headless mode
+- **Single viewport**: Records only the browser viewport, not entire screen
+- **No audio**: Browser audio is not captured (system limitation)
+- **Performance**: Recording may slow down browser slightly
+
+## Related Actions
+
+- [screenshot](/actions/screenshot) - Capture static images
+- [goTo](/actions/goTo) - Navigate to pages
+- [find](/actions/find) - Interact with elements during recording
+- [wait](/actions/wait) - Add pauses for better pacing

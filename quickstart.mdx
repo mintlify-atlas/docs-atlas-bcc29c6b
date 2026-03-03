@@ -1,80 +1,263 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with Doc Detective in minutes by running your first documentation test
 ---
 
-## Get started in three steps
+# Quick Start
 
-Get your documentation site running locally and make your first customization.
+This guide will help you install Doc Detective and run your first test. You'll learn how to test a simple web search workflow.
 
-### Step 1: Set up your local environment
+<Steps>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Step title="Install Prerequisites">
 
-### Step 2: Deploy your changes
+Doc Detective requires Node.js to run. Make sure you have Node.js installed:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+- [Node.js](https://nodejs.org/) (tested on v20 and v22)
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+Verify your installation:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+```bash
+node --version
+```
 
-### Step 3: Go live
+</Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Step title="Install Doc Detective">
 
-## Next steps
+Install Doc Detective globally using npm:
 
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+```bash
+npm i -g doc-detective
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+If you don't install Doc Detective globally, you'll be prompted to install the first time you run an `npx` command.
 </Note>
+
+</Step>
+
+<Step title="Create Your First Test">
+
+Create a new file called `kitten-search.spec.json` with the following test:
+
+```json kitten-search.spec.json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://www.duckduckgo.com"
+        },
+        {
+          "action": "find",
+          "selector": "#searchbox_input",
+          "click": true,
+          "typeKeys": {
+            "keys": ["American Shorthair kittens", "$ENTER$"]
+          }
+        },
+        {
+          "action": "find",
+          "selector": "[data-testid='web-vertical']"
+        },
+        {
+          "action": "saveScreenshot",
+          "path": "search-results.png"
+        }
+      ]
+    }
+  ]
+}
+```
+
+This test:
+1. Navigates to DuckDuckGo
+2. Finds the search box and types "American Shorthair kittens"
+3. Presses Enter to search
+4. Verifies the search results appear
+5. Takes a screenshot of the results
+
+</Step>
+
+<Step title="Run Your Test">
+
+Run the test using the following command:
+
+```bash
+npx doc-detective --input kitten-search.spec.json
+```
+
+Doc Detective will:
+- Launch a browser
+- Execute each step in your test
+- Display the results in your terminal
+- Save a screenshot to `search-results.png`
+
+</Step>
+
+<Step title="View Test Results">
+
+After the test completes, you'll see output indicating whether each step passed or failed:
+
+```
+✓ Test passed: kitten-search.spec.json
+  ✓ goTo: https://www.duckduckgo.com
+  ✓ find: #searchbox_input
+  ✓ find: [data-testid='web-vertical']
+  ✓ saveScreenshot: search-results.png
+```
+
+Check the `search-results.png` file to see the screenshot captured during the test.
+
+</Step>
+
+</Steps>
+
+## Next Steps
+
+### Try More Test Formats
+
+Doc Detective supports multiple file formats:
+
+<CodeGroup>
+
+```json JSON
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "checkLink",
+          "url": "https://www.duckduckgo.com"
+        }
+      ]
+    }
+  ]
+}
+```
+
+```yaml YAML
+tests:
+- steps:
+  - action: checkLink
+    url: https://www.duckduckgo.com
+```
+
+```markdown Markdown (Inline)
+<!-- test -->
+
+Go to [DuckDuckGo](https://www.duckduckgo.com) and search for **kittens**.
+
+<!-- test end -->
+```
+
+</CodeGroup>
+
+### Test API Documentation
+
+Create a test for API endpoints:
+
+```json api-test.spec.json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "httpRequest",
+          "url": "https://reqres.in/api/users",
+          "method": "post",
+          "requestData": {
+            "name": "morpheus",
+            "job": "leader"
+          },
+          "responseData": {
+            "name": "morpheus",
+            "job": "leader"
+          },
+          "statusCodes": [200, 201]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Test Shell Commands
+
+Verify command-line instructions:
+
+```json shell-test.spec.json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "description": "Run a Docker container and check the output.",
+          "runShell": {
+            "command": "docker run hello-world",
+            "stdio": "Hello from Docker!"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Create a Configuration File
+
+Create a `.doc-detective.json` file to customize test behavior:
+
+```json .doc-detective.json
+{
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": false
+        }
+      ]
+    }
+  ],
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"]
+    }
+  ]
+}
+```
+
+Then run tests with:
+
+```bash
+npx doc-detective --config .doc-detective.json
+```
+
+<Tip>
+You can override config options with command-line arguments. For example:
+```bash
+npx doc-detective --config .doc-detective.json --input tests.spec.json
+```
+</Tip>
+
+## Learn More
+
+<CardGroup cols={2}>
+  <Card title="Test Actions" icon="list-check" href="/actions/overview">
+    Explore all available test actions
+  </Card>
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Learn about configuration options
+  </Card>
+  <Card title="Inline Tests" icon="file-code" href="/guides/inline-tests">
+    Write tests directly in your Markdown docs
+  </Card>
+  <Card title="Samples" icon="folder" href="https://github.com/doc-detective/doc-detective/tree/main/samples">
+    Browse example tests and configs
+  </Card>
+</CardGroup>

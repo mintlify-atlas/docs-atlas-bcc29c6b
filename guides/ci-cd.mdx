@@ -1,0 +1,796 @@
+---
+title: CI/CD Integration
+description: Automate documentation testing in your continuous integration and deployment pipelines
+---
+
+Integrating Doc Detective into your CI/CD pipeline ensures your documentation stays accurate with every code change. This guide covers setup for popular CI/CD platforms.
+
+## Why Test Docs in CI/CD?
+
+Automated documentation testing provides:
+
+- **Catch errors early**: Find broken instructions before they reach users
+- **Prevent regressions**: Ensure updates don't break existing documentation
+- **Enforce quality**: Make documentation testing part of your definition of done
+- **Save time**: Automatically test across multiple platforms and browsers
+
+## Quick Start
+
+Doc Detective works in any CI/CD environment that can run Node.js:
+
+<Steps>
+  <Step title="Install Node.js">
+    Ensure Node.js 18 or later is available in your CI environment.
+  </Step>
+
+  <Step title="Install Doc Detective">
+    ```bash
+    npm install --save-dev doc-detective
+    ```
+
+    Or use npx without installation:
+    ```bash
+    npx doc-detective
+    ```
+  </Step>
+
+  <Step title="Run tests">
+    ```bash
+    npx doc-detective --config .doc-detective.json
+    ```
+  </Step>
+
+  <Step title="Check exit code">
+    Doc Detective exits with code 1 if tests fail, failing your CI build.
+  </Step>
+</Steps>
+
+## GitHub Actions
+
+### Basic Workflow
+
+Create `.github/workflows/test-docs.yml`:
+
+```yaml
+name: Test Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run Doc Detective
+        run: npx doc-detective --config .doc-detective.json
+```
+
+### Multi-Platform Testing
+
+Test across Windows, macOS, and Linux:
+
+```yaml
+name: Test Documentation
+
+on: [push, pull_request]
+
+jobs:
+  test-docs:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        node:
+          - 18
+          - 20
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run Doc Detective
+        run: npx doc-detective
+```
+
+### With Test Reports
+
+Save and upload test results:
+
+```yaml
+name: Test Documentation
+
+on: [push, pull_request]
+
+jobs:
+  test-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run Doc Detective
+        run: npx doc-detective --config .doc-detective.ci.json
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.json
+      
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/
+```
+
+With config file `.doc-detective.ci.json`:
+
+```json
+{
+  "input": ["./docs"],
+  "output": "test-results.json",
+  "recursive": true,
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Using the Doc Detective Action
+
+Use the official GitHub Action:
+
+```yaml
+name: Test Documentation
+
+on: [push, pull_request]
+
+jobs:
+  test-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: doc-detective/github-action@latest
+        with:
+          config: ./.doc-detective.json
+          input: ./docs
+          exit_on_fail: true
+```
+
+## GitLab CI/CD
+
+Create `.gitlab-ci.yml`:
+
+```yaml
+stages:
+  - test
+
+test-docs:
+  stage: test
+  image: node:20
+  
+  before_script:
+    - npm install
+  
+  script:
+    - npx doc-detective --config .doc-detective.json
+  
+  artifacts:
+    when: always
+    paths:
+      - test-results.json
+    reports:
+      junit: test-results.json
+  
+  only:
+    - branches
+    - merge_requests
+```
+
+### Multi-Platform on GitLab
+
+```yaml
+stages:
+  - test
+
+test-docs-linux:
+  stage: test
+  image: node:20
+  tags:
+    - linux
+  script:
+    - npm install
+    - npx doc-detective
+  only:
+    - branches
+
+test-docs-windows:
+  stage: test
+  tags:
+    - windows
+  before_script:
+    - npm install
+  script:
+    - npx doc-detective
+  only:
+    - branches
+
+test-docs-macos:
+  stage: test
+  tags:
+    - macos
+  before_script:
+    - npm install
+  script:
+    - npx doc-detective
+  only:
+    - branches
+```
+
+## Jenkins
+
+Create a `Jenkinsfile`:
+
+```groovy
+pipeline {
+  agent any
+  
+  tools {
+    nodejs 'Node 20'
+  }
+  
+  stages {
+    stage('Install') {
+      steps {
+        sh 'npm install'
+      }
+    }
+    
+    stage('Test Documentation') {
+      steps {
+        sh 'npx doc-detective --config .doc-detective.json'
+      }
+    }
+  }
+  
+  post {
+    always {
+      archiveArtifacts artifacts: 'test-results.json', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'screenshots/**/*.png', allowEmptyArchive: true
+    }
+  }
+}
+```
+
+### Multi-Platform Jenkins
+
+```groovy
+pipeline {
+  agent none
+  
+  stages {
+    stage('Test Documentation') {
+      matrix {
+        axes {
+          axis {
+            name 'PLATFORM'
+            values 'linux', 'windows', 'macos'
+          }
+        }
+        
+        agent {
+          label "${PLATFORM}"
+        }
+        
+        stages {
+          stage('Install') {
+            steps {
+              sh 'npm install'
+            }
+          }
+          
+          stage('Test') {
+            steps {
+              sh 'npx doc-detective'
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## CircleCI
+
+Create `.circleci/config.yml`:
+
+```yaml
+version: 2.1
+
+jobs:
+  test-docs:
+    docker:
+      - image: cimg/node:20.0
+    
+    steps:
+      - checkout
+      
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-
+      
+      - run:
+          name: Install dependencies
+          command: npm install
+      
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+      
+      - run:
+          name: Run Doc Detective
+          command: npx doc-detective --config .doc-detective.json
+      
+      - store_artifacts:
+          path: test-results.json
+          destination: test-results
+      
+      - store_artifacts:
+          path: screenshots
+          destination: screenshots
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-docs
+```
+
+## Azure Pipelines
+
+Create `azure-pipelines.yml`:
+
+```yaml
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: 'Install Node.js'
+  
+  - script: |
+      npm install
+    displayName: 'Install dependencies'
+  
+  - script: |
+      npx doc-detective --config .doc-detective.json
+    displayName: 'Run Doc Detective'
+  
+  - task: PublishBuildArtifacts@1
+    condition: always()
+    inputs:
+      pathToPublish: 'test-results.json'
+      artifactName: 'test-results'
+    displayName: 'Publish test results'
+```
+
+### Multi-Platform Azure
+
+```yaml
+trigger:
+  - main
+
+strategy:
+  matrix:
+    linux:
+      imageName: 'ubuntu-latest'
+    mac:
+      imageName: 'macos-latest'
+    windows:
+      imageName: 'windows-latest'
+
+pool:
+  vmImage: $(imageName)
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+  
+  - script: npm install
+    displayName: 'Install dependencies'
+  
+  - script: npx doc-detective
+    displayName: 'Run Doc Detective'
+```
+
+## Travis CI
+
+Create `.travis.yml`:
+
+```yaml
+language: node_js
+
+node_js:
+  - '20'
+
+install:
+  - npm install
+
+script:
+  - npx doc-detective --config .doc-detective.json
+
+after_script:
+  - if [ -f test-results.json ]; then cat test-results.json; fi
+
+os:
+  - linux
+  - osx
+  - windows
+```
+
+## Docker
+
+Use the Doc Detective Docker image:
+
+```dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+CMD ["npx", "doc-detective"]
+```
+
+In your CI pipeline:
+
+```yaml
+test-docs:
+  stage: test
+  image: doc-detective/doc-detective:latest
+  script:
+    - doc-detective --config .doc-detective.json
+```
+
+## Configuration for CI/CD
+
+Create a CI-specific configuration `.doc-detective.ci.json`:
+
+```json
+{
+  "input": ["./docs"],
+  "output": "./test-results.json",
+  "recursive": true,
+  "logLevel": "info",
+  "runOn": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+<Warning>
+Always use `headless: true` for browsers in CI/CD environments. Most CI runners don't have displays, and headless mode ensures tests run correctly.
+</Warning>
+
+## Environment Variables
+
+Use environment variables for sensitive data:
+
+<Steps>
+  <Step title="Create .env file">
+    ```bash
+    API_KEY=your-secret-key
+    API_URL=https://api.example.com
+    USERNAME=test@example.com
+    PASSWORD=secure-password
+    ```
+  </Step>
+
+  <Step title="Add to .gitignore">
+    ```bash
+    echo ".env" >> .gitignore
+    ```
+  </Step>
+
+  <Step title="Configure CI secrets">
+    Add environment variables to your CI platform:
+    
+    - **GitHub Actions**: Settings → Secrets and variables → Actions
+    - **GitLab CI**: Settings → CI/CD → Variables
+    - **Jenkins**: Credentials → Add credentials
+  </Step>
+
+  <Step title="Load in tests">
+    ```json
+    {
+      "steps": [
+        {
+          "action": "setVariables",
+          "path": ".env"
+        },
+        {
+          "action": "httpRequest",
+          "url": "$API_URL/endpoint",
+          "headers": {
+            "Authorization": "Bearer $API_KEY"
+          }
+        }
+      ]
+    }
+    ```
+  </Step>
+</Steps>
+
+## Handling Test Failures
+
+### Fail Fast
+
+Stop immediately on first failure:
+
+```yaml
+strategy:
+  fail-fast: true
+```
+
+### Continue on Failure
+
+Run all tests even if some fail:
+
+```yaml
+strategy:
+  fail-fast: false
+```
+
+### Conditional Steps
+
+```yaml
+- name: Upload screenshots on failure
+  if: failure()
+  uses: actions/upload-artifact@v4
+  with:
+    name: failure-screenshots
+    path: screenshots/
+```
+
+## Notifications
+
+### Slack Notifications
+
+```yaml
+- name: Notify Slack on failure
+  if: failure()
+  uses: slackapi/slack-github-action@v1
+  with:
+    webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+    payload: |
+      {
+        "text": "Documentation tests failed in ${{ github.repository }}"
+      }
+```
+
+### Email Notifications
+
+Most CI platforms support email notifications natively. Configure in your platform settings.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use headless mode" icon="eye-slash">
+    Always set `headless: true` for CI environments.
+  </Card>
+
+  <Card title="Cache dependencies" icon="box">
+    Cache `node_modules` to speed up builds.
+  </Card>
+
+  <Card title="Save artifacts" icon="floppy-disk">
+    Upload test results and screenshots for debugging.
+  </Card>
+
+  <Card title="Test on PRs" icon="code-pull-request">
+    Run tests on pull requests before merging.
+  </Card>
+
+  <Card title="Matrix builds" icon="table-cells">
+    Test across platforms and Node versions.
+  </Card>
+
+  <Card title="Separate config" icon="file-code">
+    Use `.doc-detective.ci.json` for CI-specific settings.
+  </Card>
+
+  <Card title="Secure secrets" icon="lock">
+    Never commit credentials. Use CI secret management.
+  </Card>
+
+  <Card title="Monitor duration" icon="clock">
+    Set timeouts to prevent hanging builds.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tests pass locally but fail in CI">
+    - Verify Node.js version matches locally
+    - Check environment variables are set correctly
+    - Ensure browser is installed in CI environment
+    - Add more wait time for slower CI runners
+    - Check file paths are correct for CI OS
+  </Accordion>
+
+  <Accordion title="Browser not launching in CI">
+    - Use `headless: true` mode
+    - Verify browser is installed
+    - Check for display/X11 issues on Linux
+    - Use Docker image with browsers pre-installed
+  </Accordion>
+
+  <Accordion title="Tests timing out">
+    - Increase step timeouts in config
+    - Add explicit wait steps
+    - Check network access in CI environment
+    - Verify API endpoints are accessible from CI
+  </Accordion>
+
+  <Accordion title="Artifacts not uploading">
+    - Check artifact paths exist
+    - Verify `output` path in config
+    - Use `if: always()` to upload on failure
+    - Check CI platform artifact size limits
+  </Accordion>
+</AccordionGroup>
+
+## Example: Complete GitHub Actions Workflow
+
+```yaml
+name: Documentation Testing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
+
+jobs:
+  test-docs:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run Doc Detective
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          API_URL: ${{ secrets.API_URL }}
+        run: npx doc-detective --config .doc-detective.ci.json
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-node${{ matrix.node }}
+          path: test-results.json
+      
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.os }}-node${{ matrix.node }}
+          path: screenshots/
+      
+      - name: Comment on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Documentation tests failed. Check the artifacts for details.'
+            })
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" href="/guides/configuration" icon="gear">
+    Optimize your CI/CD configuration
+  </Card>
+  
+  <Card title="Contexts" href="/guides/contexts" icon="browsers">
+    Learn about multi-platform testing
+  </Card>
+  
+  <Card title="Writing Tests" href="/guides/writing-tests" icon="file-code">
+    Create comprehensive test suites
+  </Card>
+  
+  <Card title="GitHub Action" href="https://github.com/marketplace/actions/doc-detective" icon="github">
+    Use the official Doc Detective Action
+  </Card>
+</CardGroup>

@@ -1,0 +1,243 @@
+---
+title: Test Schema
+description: A Doc Detective test specification
+---
+
+The test schema defines a single test that Doc Detective can execute. Tests contain steps that perform actions like navigating to URLs, clicking elements, and validating content.
+
+## Schema Reference
+
+<ParamField path="testId" type="string">
+  Unique identifier for the test. Auto-generated if not provided.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Description of the test. Useful for understanding what the test validates.
+</ParamField>
+
+<ParamField path="contentPath" type="string">
+  Path to the content that the test is associated with. Useful for tracking which documentation page this test validates.
+</ParamField>
+
+## Steps
+
+<ParamField path="steps" type="step[]" required>
+  Array of steps to execute in the test. Each step performs a specific action.
+  
+  See the [Step Schema](/schemas/step) for detailed step options.
+  
+  <Expandable title="Example">
+    ```json
+    "steps": [
+      {
+        "goTo": "https://www.example.com"
+      },
+      {
+        "find": {
+          "selector": "#search-input",
+          "click": true
+        }
+      }
+    ]
+    ```
+  </Expandable>
+</ParamField>
+
+## Test Execution
+
+<ParamField path="detectSteps" type="boolean" default={true}>
+  Whether or not to detect steps in input files based on markup regex.
+</ParamField>
+
+<ParamField path="runOn" type="context[]">
+  Contexts to run the test in. Overrides contexts defined at the config and spec levels.
+  
+  See the [Context Schema](/schemas/context) for more details.
+  
+  <Expandable title="Example">
+    ```json
+    "runOn": [
+      {
+        "platforms": ["linux"],
+        "browsers": "chrome"
+      }
+    ]
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="before" type="string | string[]">
+  Path(s) to test specifications to run before this test. Useful for test-specific setup.
+</ParamField>
+
+<ParamField path="after" type="string | string[]">
+  Path(s) to test specifications to run after this test. Useful for test-specific cleanup.
+</ParamField>
+
+## OpenAPI Integration
+
+<ParamField path="openApi" type="object[]">
+  OpenAPI descriptions to use for this test. Enables testing of API endpoints defined in OpenAPI specifications.
+  
+  <Expandable title="Properties">
+    <ParamField path="name" type="string" required>
+      Name to reference this OpenAPI description in steps.
+    </ParamField>
+    
+    <ParamField path="descriptionPath" type="string" required>
+      URL or local path to the OpenAPI description file.
+    </ParamField>
+    
+    <ParamField path="server" type="string">
+      Base URL for API requests. Overrides the server URLs in the OpenAPI description.
+    </ParamField>
+    
+    <ParamField path="validateAgainstSchema" type="string" default="both">
+      Whether to validate requests and/or responses against the OpenAPI schema.
+      
+      **Options:** `request`, `response`, `both`, `none`
+    </ParamField>
+    
+    <ParamField path="useExample" type="string" default="none">
+      Whether to use examples from the OpenAPI description.
+      
+      **Options:** `request`, `response`, `both`, `none`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Simple Example
+
+```json
+{
+  "steps": [
+    {
+      "checkLink": "https://www.duckduckgo.com"
+    }
+  ]
+}
+```
+
+## Interactive Example
+
+```json
+{
+  "testId": "search-functionality-test",
+  "description": "Test the search functionality on DuckDuckGo",
+  "steps": [
+    {
+      "goTo": {
+        "url": "https://www.duckduckgo.com"
+      }
+    },
+    {
+      "find": {
+        "selector": "[title=Search]",
+        "click": true,
+        "type": {
+          "keys": [
+            "shorthair cats",
+            "$ENTER$"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+## Complete Example
+
+```json
+{
+  "testId": "comprehensive-test-example",
+  "description": "A comprehensive test showing multiple step types",
+  "contentPath": "docs/getting-started.md",
+  "detectSteps": true,
+  "before": "setup.json",
+  "after": "cleanup.json",
+  "runOn": [
+    {
+      "platforms": ["linux"],
+      "browsers": {
+        "name": "firefox",
+        "headless": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "loadVariables": ".env"
+    },
+    {
+      "checkLink": {
+        "url": "https://www.example.com"
+      }
+    },
+    {
+      "httpRequest": {
+        "method": "post",
+        "url": "https://api.example.com/users",
+        "request": {
+          "body": {
+            "name": "John Doe",
+            "email": "john@example.com"
+          }
+        },
+        "statusCodes": [200, 201]
+      }
+    },
+    {
+      "goTo": {
+        "url": "https://www.example.com"
+      }
+    },
+    {
+      "find": {
+        "selector": "#search-input",
+        "click": true,
+        "type": {
+          "keys": ["search query"]
+        }
+      }
+    },
+    {
+      "screenshot": {
+        "path": "search-results.png",
+        "maxVariation": 0.1
+      }
+    }
+  ]
+}
+```
+
+## OpenAPI Example
+
+```json
+{
+  "testId": "api-test-with-openapi",
+  "openApi": [
+    {
+      "name": "MyAPI",
+      "descriptionPath": "https://api.example.com/openapi.json",
+      "server": "https://api.example.com",
+      "validateAgainstSchema": "both",
+      "useExample": "none"
+    }
+  ],
+  "steps": [
+    {
+      "httpRequest": {
+        "openApi": {
+          "operationId": "getUserById"
+        },
+        "request": {
+          "parameters": {
+            "id": 123
+          }
+        }
+      }
+    }
+  ]
+}
+```

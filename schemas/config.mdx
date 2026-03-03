@@ -1,0 +1,180 @@
+---
+title: Config Schema
+description: Configuration options for Doc Detective operations
+---
+
+The config schema defines all configuration options for Doc Detective. You can specify configurations in a `docDetective.json` or `docDetective.yaml` file at the root of your project.
+
+## Schema Reference
+
+<ParamField path="$schema" type="string">
+  JSON Schema reference for this object.
+  
+  **Value:** `https://raw.githubusercontent.com/doc-detective/common/refs/heads/main/dist/schemas/config_v3.schema.json`
+</ParamField>
+
+<ParamField path="configId" type="string">
+  Unique identifier for the configuration. Auto-generated if not provided.
+</ParamField>
+
+<ParamField path="configPath" type="string" readOnly>
+  Path to the configuration file. This is set automatically by Doc Detective.
+</ParamField>
+
+## Input/Output Configuration
+
+<ParamField path="input" type="string | string[]" default=".">
+  Path(s) to test specifications and documentation source files. May be paths to specific files or to directories to scan for files.
+  
+  <Expandable title="Examples">
+    ```json
+    "input": "."
+    ```
+    
+    ```json
+    "input": ["docs", "tests"]
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="output" type="string" default=".">
+  Path of the directory in which to store the output of Doc Detective commands. If a file path is specified, Doc Detective attempts to honor the file name specified, but file path behavior is controlled by the configured reporters.
+</ParamField>
+
+<ParamField path="recursive" type="boolean" default={true}>
+  If `true`, searches `input`, `beforeAny`, and `afterAll` paths recursively for test specifications and source files.
+</ParamField>
+
+<ParamField path="relativePathBase" type="string" default="file">
+  Whether paths should be interpreted as relative to the current working directory (`cwd`) or to the file in which they're specified (`file`).
+  
+  **Options:** `cwd`, `file`
+</ParamField>
+
+## Test Execution
+
+<ParamField path="beforeAny" type="string | string[]">
+  Path(s) to test specifications to perform before those specified by `input`. Useful for setting up testing environments.
+  
+  <Expandable title="Example">
+    ```json
+    "beforeAny": "setup.spec.json"
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="afterAll" type="string | string[]">
+  Path(s) to test specifications to perform after those specified by `input`. Useful for cleaning up testing environments.
+  
+  <Expandable title="Example">
+    ```json
+    "afterAll": "cleanup.spec.json"
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="detectSteps" type="boolean" default={true}>
+  Whether or not to detect steps in input files based on defined markup.
+</ParamField>
+
+<ParamField path="allowUnsafeSteps" type="boolean">
+  Whether or not to run potentially unsafe steps, such as those that might modify files or system state.
+</ParamField>
+
+<ParamField path="crawl" type="boolean" default={false}>
+  If `true`, crawls sitemap.xml files specified by URL to find additional files to test.
+</ParamField>
+
+<ParamField path="processDitaMaps" type="boolean" default={true}>
+  If `true`, processes DITA maps and includes generated files as inputs.
+</ParamField>
+
+## Environment
+
+<ParamField path="loadVariables" type="string">
+  Load environment variables from the specified `.env` file.
+  
+  <Expandable title="Example">
+    ```json
+    "loadVariables": ".env"
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="origin" type="string">
+  Default protocol and domain to use for relative URLs.
+  
+  <Expandable title="Example">
+    ```json
+    "origin": "https://docs.example.com"
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField path="runOn" type="context[]">
+  Contexts to run tests in. Overrides contexts defined at the spec and test levels.
+  
+  See the [Context Schema](/schemas/context) for more details.
+</ParamField>
+
+## Logging and Debugging
+
+<ParamField path="logLevel" type="string" default="info">
+  Amount of detail to output when performing an operation.
+  
+  **Options:** `silent`, `error`, `warning`, `info`, `debug`
+</ParamField>
+
+## Performance
+
+<ParamField path="concurrentRunners" type="boolean | number">
+  Number of concurrent test runners. Set to `true` to auto-detect based on CPU cores, or specify a number.
+  
+  <Expandable title="Examples">
+    ```json
+    "concurrentRunners": 1
+    ```
+    
+    ```json
+    "concurrentRunners": true
+    ```
+    
+    ```json
+    "concurrentRunners": 4
+    ```
+  </Expandable>
+</ParamField>
+
+## Complete Example
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/doc-detective/common/refs/heads/main/dist/schemas/config_v3.schema.json",
+  "input": ".",
+  "output": ".",
+  "recursive": true,
+  "relativePathBase": "file",
+  "loadVariables": ".env",
+  "origin": "https://docs.example.com",
+  "beforeAny": "setup.spec.json",
+  "afterAll": "cleanup.spec.json",
+  "detectSteps": true,
+  "allowUnsafeSteps": false,
+  "logLevel": "info",
+  "concurrentRunners": true,
+  "runOn": [
+    {
+      "platforms": ["linux", "mac", "windows"],
+      "browsers": ["chrome", "firefox"]
+    }
+  ]
+}
+```
+
+## Minimal Example
+
+```json
+{}
+```
+
+An empty configuration object is valid and will use all default values.

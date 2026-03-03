@@ -1,0 +1,397 @@
+---
+title: runTests()
+description: Execute documentation tests with a given configuration and return test results
+---
+
+The `runTests()` function is the primary entry point for executing documentation tests programmatically. It orchestrates the entire test execution pipeline: detecting tests, resolving contexts, and running test steps.
+
+## Function Signature
+
+```typescript
+async function runTests(
+  config: Config,
+  options?: { resolvedTests?: ResolvedTests }
+): Promise<Results | null>
+```
+
+## Parameters
+
+<ParamField path="config" type="object" required>
+  Configuration object that defines how tests should be detected and executed. Must conform to the [config schema](https://doc-detective.com/docs/references/schemas/config.html).
+  
+  <Expandable title="Common config properties">
+    <ParamField path="input" type="string | string[]">
+      Path(s) to test specifications and documentation source files. May be paths to specific files or directories to scan.
+    </ParamField>
+    
+    <ParamField path="output" type="string">
+      Directory for storing test output and results.
+    </ParamField>
+    
+    <ParamField path="recursive" type="boolean" default={true}>
+      Whether to search input paths recursively for test files.
+    </ParamField>
+    
+    <ParamField path="fileTypes" type="array">
+      File types to process. Supported values: `'markdown'`, `'html'`, `'dita'`, `'asciidoc'`, or custom file type objects.
+    </ParamField>
+    
+    <ParamField path="detectSteps" type="boolean" default={true}>
+      Whether to detect test steps from markup patterns in documentation.
+    </ParamField>
+    
+    <ParamField path="runOn" type="Context[]">
+      Array of contexts (platform/browser combinations) to run tests in.
+    </ParamField>
+    
+    <ParamField path="logLevel" type="string" default="info">
+      Logging verbosity. Options: `'silent'`, `'error'`, `'warning'`, `'info'`, `'debug'`.
+    </ParamField>
+    
+    <ParamField path="concurrentRunners" type="number | boolean" default={1}>
+      Number of concurrent test runners. Set to `true` to use CPU core count (capped at 4).
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="options" type="object">
+  Optional execution options.
+  
+  <Expandable title="options properties">
+    <ParamField path="resolvedTests" type="ResolvedTests">
+      Pre-resolved tests from `resolveTests()`. If provided, skips test detection and resolution phases and executes the provided tests directly.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Return Value
+
+<ResponseField name="results" type="Results | null">
+  Returns a results object containing test outcomes, or `null` if no tests could be resolved.
+  
+  <Expandable title="Results structure">
+    <ResponseField name="resolvedTestsId" type="string">
+      Unique identifier for this test run.
+    </ResponseField>
+    
+    <ResponseField name="config" type="Config">
+      The configuration object used for test execution.
+    </ResponseField>
+    
+    <ResponseField name="specs" type="Spec[]">
+      Array of test specifications that were executed, each containing:
+      - `specId` - Unique identifier for the specification
+      - `contentPath` - Path to the source file
+      - `tests` - Array of tests with their execution results
+      - Each test contains `status` ('PASS' or 'FAIL') and detailed step results
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Basic Usage
+
+<CodeGroup>
+```javascript JavaScript
+const { runTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  output: './test-results',
+  recursive: true,
+  fileTypes: ['markdown'],
+  logLevel: 'info'
+};
+
+const results = await runTests(config);
+
+if (results) {
+  console.log(`Executed ${results.specs.length} test specifications`);
+} else {
+  console.log('No tests found');
+}
+```
+
+```typescript TypeScript
+import { runTests } from 'doc-detective';
+import type { Config, Results } from 'doc-detective';
+
+const config: Config = {
+  input: './docs',
+  output: './test-results',
+  recursive: true,
+  fileTypes: ['markdown'],
+  logLevel: 'info'
+};
+
+const results: Results | null = await runTests(config);
+
+if (results) {
+  console.log(`Executed ${results.specs.length} test specifications`);
+} else {
+  console.log('No tests found');
+}
+```
+</CodeGroup>
+
+## Running with Pre-Resolved Tests
+
+For advanced workflows, you can provide pre-resolved tests to skip the detection and resolution phases:
+
+<CodeGroup>
+```javascript JavaScript
+const { detectTests, resolveTests, runTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+// Detect and resolve tests separately
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// Run with pre-resolved tests
+const results = await runTests(config, { resolvedTests });
+```
+
+```typescript TypeScript
+import { detectTests, resolveTests, runTests } from 'doc-detective';
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+// Detect and resolve tests separately
+const detectedTests = await detectTests({ config });
+const resolvedTests = await resolveTests({ config, detectedTests });
+
+// Run with pre-resolved tests
+const results = await runTests(config, { resolvedTests });
+```
+</CodeGroup>
+
+## Handling Results
+
+Process test results to determine success or failure:
+
+```javascript
+const { runTests } = require('doc-detective');
+
+const config = {
+  input: './docs',
+  fileTypes: ['markdown']
+};
+
+const results = await runTests(config);
+
+if (!results) {
+  console.error('No tests were found or executed');
+  process.exit(1);
+}
+
+// Check for any failures
+let failureCount = 0;
+let passCount = 0;
+
+for (const spec of results.specs) {
+  for (const test of spec.tests) {
+    for (const context of test.contexts) {
+      if (context.status === 'FAIL') {
+        failureCount++;
+        console.error(`Failed: ${spec.contentPath} - ${test.testId}`);
+      } else if (context.status === 'PASS') {
+        passCount++;
+      }
+    }
+  }
+}
+
+console.log(`Results: ${passCount} passed, ${failureCount} failed`);
+
+if (failureCount > 0) {
+  process.exit(1);
+}
+```
+
+## Multiple Input Paths
+
+Specify multiple input paths for comprehensive testing:
+
+```javascript
+const config = {
+  input: [
+    './docs/getting-started',
+    './docs/api-reference',
+    './docs/tutorials'
+  ],
+  output: './test-results',
+  recursive: true,
+  fileTypes: ['markdown', 'html']
+};
+
+const results = await runTests(config);
+```
+
+## Running Tests in Specific Contexts
+
+Define platform and browser contexts for test execution:
+
+```javascript
+const config = {
+  input: './docs',
+  runOn: [
+    {
+      platforms: ['linux', 'mac', 'windows'],
+      browsers: ['chrome']
+    },
+    {
+      platforms: ['mac'],
+      browsers: ['safari']
+    }
+  ],
+  fileTypes: ['markdown']
+};
+
+const results = await runTests(config);
+```
+
+## Parallel Execution
+
+Enable concurrent test execution for faster results:
+
+```javascript
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  concurrentRunners: true  // Uses CPU core count, capped at 4
+};
+
+const results = await runTests(config);
+```
+
+Or specify an exact number of concurrent runners:
+
+```javascript
+const config = {
+  input: './docs',
+  fileTypes: ['markdown'],
+  concurrentRunners: 3  // Run 3 tests in parallel
+};
+
+const results = await runTests(config);
+```
+
+## CI/CD Integration
+
+Integrate with CI/CD pipelines with proper error handling:
+
+```javascript
+const { runTests } = require('doc-detective');
+
+const config = {
+  input: process.env.DOCS_PATH || './docs',
+  output: './test-results',
+  fileTypes: ['markdown'],
+  logLevel: process.env.CI ? 'info' : 'debug'
+};
+
+try {
+  console.log('Running documentation tests...');
+  const results = await runTests(config);
+  
+  if (!results) {
+    console.error('No tests found');
+    process.exit(1);
+  }
+  
+  // Count failures
+  const failures = results.specs.reduce((count, spec) => {
+    return count + spec.tests.reduce((testCount, test) => {
+      return testCount + test.contexts.filter(ctx => ctx.status === 'FAIL').length;
+    }, 0);
+  }, 0);
+  
+  if (failures > 0) {
+    console.error(`${failures} test(s) failed`);
+    process.exit(1);
+  }
+  
+  console.log('All tests passed!');
+  process.exit(0);
+} catch (error) {
+  console.error('Error running tests:', error.message);
+  process.exit(1);
+}
+```
+
+## API Integration Testing
+
+Test API documentation with HTTP requests:
+
+```javascript
+const config = {
+  input: './api-docs',
+  fileTypes: ['markdown'],
+  detectSteps: true,  // Detect httpRequest actions from code blocks
+  allowUnsafeSteps: true,  // Allow runCode and runShell steps
+  logLevel: 'info'
+};
+
+const results = await runTests(config);
+```
+
+## Error Handling
+
+The function handles various error conditions:
+
+```javascript
+try {
+  const results = await runTests(config);
+  
+  if (!results) {
+    // No tests were detected or resolved
+    console.warn('No tests found in specified paths');
+    return;
+  }
+  
+  // Process results...
+} catch (error) {
+  // Configuration errors or fatal issues
+  if (error.message.includes('Invalid config')) {
+    console.error('Configuration error:', error.message);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+  process.exit(1);
+}
+```
+
+## Behavior
+
+The `runTests()` function performs the following steps:
+
+1. **Validation** - Validates the provided configuration against the config schema
+2. **Detection** - Scans input paths for test specifications and documentation files (unless `resolvedTests` is provided)
+3. **Parsing** - Extracts tests from detected files based on file type and markup patterns
+4. **Resolution** - Resolves test contexts, platforms, browsers, and OpenAPI definitions (unless `resolvedTests` is provided)
+5. **Execution** - Runs tests locally or via the Doc Detective API (if configured)
+6. **Cleanup** - Cleans up temporary files and resources
+7. **Telemetry** - Sends anonymous usage telemetry (if enabled)
+8. **Results** - Returns structured test results
+
+## Notes
+
+- The function displays a telemetry notice on first run
+- Temporary files are automatically cleaned up after execution
+- Tests can run locally or via the Doc Detective Orchestration API if an API key is configured
+- Results are logged to console based on the `logLevel` configuration
+- Relative paths in config are resolved based on `relativePathBase` setting ('cwd' or 'file')
+- The function supports environment variable substitution in configuration values
+
+## See Also
+
+- [detectTests()](/api/detectTests) - Detect tests without running them
+- [resolveTests()](/api/resolveTests) - Resolve detected tests for execution
+- [Config schema](https://doc-detective.com/docs/references/schemas/config.html) - Full configuration options
+- [Results schema](https://doc-detective.com/docs/references/schemas/report.html) - Result object structure

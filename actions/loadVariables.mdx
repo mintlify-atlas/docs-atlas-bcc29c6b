@@ -1,0 +1,559 @@
+---
+title: loadVariables
+description: Load environment variables from .env files
+---
+
+The `loadVariables` action loads environment variables from a specified `.env` file, making them available for use in subsequent test steps. Variables are accessed using the `$VARIABLE_NAME` syntax throughout your test.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Load from File
+{
+  "action": "loadVariables",
+  "path": ".env"
+}
+```
+
+```json Custom Path
+{
+  "action": "loadVariables",
+  "path": "config/test.env"
+}
+```
+
+```json Inline
+".env"
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="path" type="string" required>
+  Path to the `.env` file to load. Can be relative or absolute.
+  
+  Relative paths are resolved based on the test specification location.
+</ParamField>
+
+## .env File Format
+
+Environment files use standard `.env` format:
+
+```bash .env
+# API Configuration
+API_URL=https://api.example.com
+API_TOKEN=your-secret-token-here
+
+# User Credentials
+USER_EMAIL=test@example.com
+USER_PASSWORD=SecurePassword123
+
+# Test Configuration
+TIMEOUT=30000
+BASE_URL=https://staging.example.com
+
+# Feature Flags
+ENABLE_FEATURE_X=true
+DEBUG_MODE=false
+```
+
+### Format Rules
+
+- One variable per line: `KEY=value`
+- Comments start with `#`
+- No quotes needed (but supported): `KEY=value` or `KEY="value"`
+- Empty lines are ignored
+- No spaces around `=`: `KEY=value` (not `KEY = value`)
+
+## Using Variables
+
+Once loaded, variables are referenced with `$VARIABLE_NAME`:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "goTo",
+      "url": "$BASE_URL/login"
+    },
+    {
+      "action": "httpRequest",
+      "url": "$API_URL/users",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer $API_TOKEN"
+        }
+      }
+    }
+  ]
+}
+```
+
+## Examples
+
+### Basic Variable Loading
+
+Load and use environment variables:
+
+**.env**
+```bash
+BASE_URL=https://app.example.com
+USER_NAME=testuser
+```
+
+**Test**
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "goTo",
+      "url": "$BASE_URL/dashboard"
+    },
+    {
+      "action": "type",
+      "keys": "$USER_NAME",
+      "selector": "#username"
+    }
+  ]
+}
+```
+
+### API Testing with Credentials
+
+**env**
+```bash
+API_URL=https://api.example.com
+API_KEY=sk_test_1234567890
+USER_ID=12345
+```
+
+**Test**
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": "env"
+    },
+    {
+      "action": "httpRequest",
+      "url": "$API_URL/users/$USER_ID",
+      "request": {
+        "headers": {
+          "Authorization": "Bearer $API_KEY"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Multi-Environment Configuration
+
+Different files for different environments:
+
+**.env.dev**
+```bash
+BASE_URL=https://dev.example.com
+API_URL=https://api.dev.example.com
+```
+
+**.env.staging**
+```bash
+BASE_URL=https://staging.example.com
+API_URL=https://api.staging.example.com
+```
+
+**Test**
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env.staging"
+    },
+    {
+      "action": "goTo",
+      "url": "$BASE_URL"
+    }
+  ]
+}
+```
+
+### Login Flow with Credentials
+
+**credentials.env**
+```bash
+LOGIN_URL=https://app.example.com/login
+USER_EMAIL=test.user@example.com
+USER_PASSWORD=TestPass123!
+```
+
+**Test**
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": "credentials.env"
+    },
+    {
+      "action": "goTo",
+      "url": "$LOGIN_URL"
+    },
+    {
+      "action": "find",
+      "selector": "#email",
+      "click": true,
+      "type": { "keys": "$USER_EMAIL" }
+    },
+    {
+      "action": "find",
+      "selector": "#password",
+      "click": true,
+      "type": { "keys": "$USER_PASSWORD" }
+    },
+    {
+      "action": "click",
+      "elementText": "Sign In"
+    }
+  ]
+}
+```
+
+### Complete Example from Samples
+
+**env**
+```bash
+USER=John Doe
+JOB=Software Engineer
+```
+
+**http.spec.yaml**
+```yaml
+tests:
+- steps:
+  - loadVariables: env
+  - httpRequest:
+      url: http://localhost:8092/api/users
+      method: post
+      request:
+        body:
+          name: $USER
+          job: $JOB
+      response:
+        body:
+          name: John Doe
+          job: Software Engineer
+```
+
+### Timeout Configuration
+
+**config.env**
+```bash
+SHORT_WAIT=1000
+MEDIUM_WAIT=5000
+LONG_WAIT=30000
+REQUEST_TIMEOUT=60000
+```
+
+**Test**
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": "config.env"
+    },
+    {
+      "action": "wait",
+      "duration": "$SHORT_WAIT"
+    },
+    {
+      "action": "httpRequest",
+      "url": "https://api.example.com/slow-endpoint",
+      "timeout": "$REQUEST_TIMEOUT"
+    }
+  ]
+}
+```
+
+### Feature Flags
+
+**features.env**
+```bash
+ENABLE_NEW_UI=true
+BETA_FEATURES=false
+DEBUG_MODE=true
+```
+
+**Test**
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": "features.env"
+    },
+    {
+      "action": "goTo",
+      "url": "https://app.example.com?beta=$BETA_FEATURES"
+    }
+  ]
+}
+```
+
+## Variable Scope
+
+Variables are available:
+- **From load point forward**: All steps after `loadVariables`
+- **Within the same test**: Not shared between separate tests
+- **In all action parameters**: URLs, selectors, request bodies, etc.
+
+```json
+{
+  "tests": [
+    {
+      "id": "Test 1",
+      "steps": [
+        { "action": "loadVariables", "path": ".env" },
+        { "action": "goTo", "url": "$BASE_URL" }  // ✓ Works
+      ]
+    },
+    {
+      "id": "Test 2",
+      "steps": [
+        { "action": "goTo", "url": "$BASE_URL" }  // ✗ Variable not loaded
+      ]
+    }
+  ]
+}
+```
+
+## Where Variables Work
+
+Variables can be used in:
+
+- **URLs**: `"url": "$BASE_URL/path"`
+- **Request headers**: `"Authorization": "Bearer $TOKEN"`
+- **Request bodies**: `"name": "$USER_NAME"`
+- **Selectors**: `"selector": "$ELEMENT_ID"`
+- **Text input**: `"keys": "$PASSWORD"`
+- **Wait durations**: `"duration": "$TIMEOUT"`
+- **File paths**: `"path": "$OUTPUT_DIR/file.png"`
+- **Any string parameter**: Most action parameters support variables
+
+## Multiple .env Files
+
+Load multiple files to combine configurations:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "loadVariables",
+      "path": ".env.local"
+    },
+    // ... use variables ...
+  ]
+}
+```
+
+<Note>
+  Later loads override earlier ones. If both files define `API_URL`, the second file's value is used.
+</Note>
+
+## Best Practices
+
+### Separate Secrets from Config
+
+```bash .env
+# Safe to commit
+BASE_URL=https://app.example.com
+API_URL=https://api.example.com
+```
+
+```bash .env.local
+# Add to .gitignore
+API_TOKEN=secret-token-here
+USER_PASSWORD=secret-password
+```
+
+### Use Descriptive Names
+
+```bash
+# Good
+API_BASE_URL=https://api.example.com
+USER_LOGIN_EMAIL=test@example.com
+REQUEST_TIMEOUT_MS=30000
+
+# Avoid
+URL=https://api.example.com
+EMAIL=test@example.com
+T=30000
+```
+
+### Group Related Variables
+
+```bash
+# API Configuration
+API_URL=https://api.example.com
+API_KEY=abc123
+API_TIMEOUT=30000
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=testdb
+
+# User Credentials
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin123
+```
+
+### Environment-Specific Files
+
+Organize by environment:
+
+```
+project/
+├── .env              # Default/local
+├── .env.development  # Development
+├── .env.staging      # Staging
+├── .env.production   # Production
+└── .env.example      # Template (commit this)
+```
+
+### Document Variables
+
+Create `.env.example` template:
+
+```bash .env.example
+# Application URLs
+BASE_URL=https://example.com
+API_URL=https://api.example.com
+
+# Authentication
+API_TOKEN=your-token-here
+USER_EMAIL=your-email@example.com
+USER_PASSWORD=your-password
+
+# Test Configuration
+TIMEOUT=30000
+REQUEST_TIMEOUT=60000
+```
+
+## Security Considerations
+
+<Warning>
+  Never commit real secrets to version control!
+  
+  Add `.env` files with secrets to `.gitignore`:
+  ```
+  .env
+  .env.local
+  *.env.local
+  .env.*.local
+  ```
+</Warning>
+
+### Safe Patterns
+
+**Good** ✓
+```bash
+# In .env (not committed)
+API_TOKEN=real-secret-token
+```
+
+**Bad** ✗
+```bash
+# In test file (committed)
+{
+  "request": {
+    "headers": {
+      "Authorization": "Bearer real-secret-token"
+    }
+  }
+}
+```
+
+### CI/CD Secrets
+
+For CI/CD pipelines:
+
+1. Store secrets in CI/CD platform (GitHub Secrets, GitLab CI/CD Variables, etc.)
+2. Generate `.env` file from secrets before tests
+3. Load generated `.env` file in tests
+
+```bash
+# CI/CD script
+echo "API_TOKEN=$CI_API_TOKEN" > .env
+echo "USER_PASSWORD=$CI_USER_PASSWORD" >> .env
+doc-detective run tests/
+```
+
+## Troubleshooting
+
+### Variable Not Found
+
+**Issue**: Test uses `$VARIABLE` but variable is undefined
+
+**Solutions**:
+1. Verify `loadVariables` is called before variable use
+2. Check variable name spelling (case-sensitive)
+3. Ensure variable exists in `.env` file
+4. Verify `.env` file path is correct
+
+### File Not Found
+
+**Issue**: `loadVariables` fails with file not found error
+
+**Solutions**:
+1. Check file path is correct (relative to test spec)
+2. Verify file exists and is readable
+3. Use absolute path if relative path fails
+
+### Variable Not Expanding
+
+**Issue**: Literal `$VARIABLE` appears instead of value
+
+**Solutions**:
+1. Verify parameter supports variables (most do)
+2. Check variable was loaded before use
+3. Ensure proper syntax: `$VAR` not `${VAR}` or `%VAR%`
+
+## Supported Actions
+
+Variables work in all actions that accept string parameters:
+
+- ✓ [checkLink](/actions/checkLink) - URLs, origins
+- ✓ [click](/actions/click) - Selectors, text
+- ✓ [find](/actions/find) - Selectors, text
+- ✓ [goTo](/actions/goTo) - URLs
+- ✓ [httpRequest](/actions/httpRequest) - URLs, headers, body
+- ✓ [type](/actions/type) - Keys, selectors
+- ✓ [wait](/actions/wait) - Duration
+- ✓ [runShell](/actions/runShell) - Commands, arguments
+- ✓ [runCode](/actions/runCode) - Code
+- ✓ [screenshot](/actions/screenshot) - Paths
+- ✓ [record](/actions/record) - Paths
+
+## Related Actions
+
+- [httpRequest](/actions/httpRequest) - Use variables for API credentials and URLs
+- [goTo](/actions/goTo) - Navigate to variable URLs
+- [runShell](/actions/runShell) - Pass variables to shell commands

@@ -1,0 +1,512 @@
+---
+title: Configuration
+description: Configure Doc Detective with .doc-detective.json configuration files
+---
+
+Doc Detective uses a `.doc-detective.json` configuration file to define default behaviors, test inputs, output locations, and more. Configuration files provide a centralized place to manage settings that apply across all your tests.
+
+## Configuration File Location
+
+By default, Doc Detective looks for `.doc-detective.json` in the current working directory. You can specify a different path using the `--config` flag:
+
+```bash
+doc-detective test --config path/to/config.json
+```
+
+## Basic Configuration
+
+Here's a minimal configuration file:
+
+```json .doc-detective.json
+{
+  "input": "tests",
+  "output": "results",
+  "contexts": [
+    {
+      "platforms": ["linux"],
+      "browsers": ["firefox"]
+    }
+  ]
+}
+```
+
+This tells Doc Detective to:
+- Look for test files in the `tests` directory
+- Save results to the `results` directory
+- Run tests in Firefox on Linux
+
+## Core Configuration Options
+
+### Input and Output
+
+<ParamField path="input" type="string | string[]">
+  Path(s) to test specifications and documentation source files. Can be a specific file or directory to scan.
+
+  ```json
+  {
+    "input": ["tests", "docs/**/*.mdx"]
+  }
+  ```
+</ParamField>
+
+<ParamField path="output" type="string">
+  Directory where test results are stored. If a file path is specified, Doc Detective attempts to honor the file name.
+
+  ```json
+  {
+    "output": "test-results"
+  }
+  ```
+</ParamField>
+
+<ParamField path="recursive" type="boolean" default="true">
+  If `true`, searches input paths recursively for test specifications and source files.
+</ParamField>
+
+<ParamField path="relativePathBase" type="string" default="cwd">
+  Whether paths should be interpreted as relative to the current working directory (`cwd`) or to the file in which they're specified (`file`).
+
+  ```json
+  {
+    "relativePathBase": "file"
+  }
+  ```
+</ParamField>
+
+### Test Execution
+
+<ParamField path="contexts" type="Context[]">
+  Default contexts (platform/browser combinations) for all tests. Can be overridden at the spec or test level.
+
+  ```json
+  {
+    "contexts": [
+      {
+        "platforms": ["windows", "mac", "linux"],
+        "browsers": [
+          {
+            "name": "firefox",
+            "headless": false
+          }
+        ]
+      }
+    ]
+  }
+  ```
+</ParamField>
+
+<ParamField path="detectSteps" type="boolean" default="true">
+  Whether to detect steps in input files based on markup regex patterns.
+</ParamField>
+
+<ParamField path="allowUnsafeSteps" type="boolean" default="false">
+  Whether to run potentially unsafe steps (those that modify files or system state) outside of Docker containers.
+
+  <Warning>
+    Enable this only if you trust all test code. Unsafe steps can modify your system.
+  </Warning>
+</ParamField>
+
+<ParamField path="concurrentRunners" type="number | boolean" default="false">
+  Number of concurrent test runners. Set to `true` to use CPU core count (capped at 4).
+
+  ```json
+  {
+    "concurrentRunners": 2
+  }
+  ```
+</ParamField>
+
+### Setup and Cleanup
+
+<ParamField path="beforeAny" type="string | string[]">
+  Path(s) to test specifications to run before any tests. Useful for environment setup.
+
+  ```json
+  {
+    "beforeAny": "setup/install-dependencies.spec.json"
+  }
+  ```
+</ParamField>
+
+<ParamField path="afterAll" type="string | string[]">
+  Path(s) to test specifications to run after all tests. Useful for cleanup.
+
+  ```json
+  {
+    "afterAll": "cleanup/remove-test-data.spec.json"
+  }
+  ```
+</ParamField>
+
+<ParamField path="loadVariables" type="string">
+  Path to a `.env` file to load environment variables from.
+
+  ```json
+  {
+    "loadVariables": ".env.test"
+  }
+  ```
+</ParamField>
+
+### Logging and Debugging
+
+<ParamField path="logLevel" type="string" default="info">
+  Amount of detail to output. Options: `silent`, `error`, `warning`, `info`, `debug`.
+
+  ```json
+  {
+    "logLevel": "debug"
+  }
+  ```
+</ParamField>
+
+<ParamField path="debug" type="boolean | string" default="false">
+  Enable debugging mode. Set to `true` to pause on breakpoints, or `stepThrough` to pause at every step.
+
+  ```json
+  {
+    "debug": "stepThrough"
+  }
+  ```
+</ParamField>
+
+### Advanced Options
+
+<ParamField path="origin" type="string">
+  Default protocol and domain for relative URLs.
+
+  ```json
+  {
+    "origin": "https://docs.example.com"
+  }
+  ```
+</ParamField>
+
+<ParamField path="crawl" type="boolean" default="false">
+  If `true`, crawls sitemap.xml files specified by URL to find additional files to test.
+</ParamField>
+
+<ParamField path="processDitaMaps" type="boolean" default="false">
+  If `true`, processes DITA maps and includes generated files as inputs.
+</ParamField>
+
+## File Type Configuration
+
+Define how Doc Detective should process different file types:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"],
+      "inlineStatements": {
+        "testStart": [
+          "{\\/\\*\\s*test\\s+?([\\s\\S]*?)\\s*\\*\\/}",
+          "<!--\\s*test\\s*([\\s\\S]*?)\\s*-->"
+        ],
+        "testEnd": [
+          "{\\/\\*\\s*test end\\s*\\*\\/}",
+          "<!--\\s*test end\\s*-->"
+        ],
+        "step": [
+          "{\\/\\*\\s*step\\s+?([\\s\\S]*?)\\s*\\*\\/}",
+          "<!--\\s*step\\s*([\\s\\S]*?)\\s*-->"
+        ]
+      },
+      "markup": [
+        {
+          "name": "clickBoldText",
+          "regex": [
+            "\\b(?:[Cc]lick)\\b\\s+\\*\\*((?:(?!\\*\\*).)+)\\*\\*"
+          ],
+          "actions": ["click"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+<Note>
+Doc Detective includes default file type configurations for Markdown, HTML, DITA, and AsciiDoc. You only need to specify custom configurations if you want to override the defaults or add new file types.
+</Note>
+
+## Integration Configuration
+
+### OpenAPI Integration
+
+Configure OpenAPI specification testing:
+
+```json
+{
+  "integrations": {
+    "openApi": [
+      {
+        "url": "https://api.example.com/openapi.json",
+        "auth": {
+          "type": "bearer",
+          "token": "$OPENAPI_TOKEN"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Heretto CMS Integration
+
+Configure Heretto CMS integration for testing content directly from the CMS:
+
+```json
+{
+  "integrations": {
+    "heretto": [
+      {
+        "name": "production",
+        "organizationId": "your-org",
+        "username": "user@example.com",
+        "apiToken": "$HERETTO_TOKEN",
+        "scenarioName": "Production Docs",
+        "uploadOnChange": true
+      }
+    ]
+  }
+}
+```
+
+<Warning>
+Store sensitive values like API tokens in environment variables. Never commit tokens directly to your configuration file.
+</Warning>
+
+## Telemetry Configuration
+
+Control telemetry data collection:
+
+```json
+{
+  "telemetry": {
+    "send": true,
+    "userId": "your-org-identifier"
+  }
+}
+```
+
+<ParamField path="telemetry.send" type="boolean" default="true">
+  Whether to send usage telemetry to Doc Detective.
+</ParamField>
+
+<ParamField path="telemetry.userId" type="string">
+  Identifier for your organization, group, or individual.
+</ParamField>
+
+## Real-World Examples
+
+### Simple Documentation Site
+
+```json .doc-detective.json
+{
+  "input": "docs",
+  "output": "test-results",
+  "recursive": true,
+  "detectSteps": true,
+  "contexts": [
+    {
+      "platforms": ["linux"],
+      "browsers": ["firefox"]
+    }
+  ],
+  "logLevel": "info"
+}
+```
+
+### CI/CD Pipeline Configuration
+
+```json .doc-detective.json
+{
+  "input": ["tests", "docs"],
+  "output": "results/tests.json",
+  "recursive": true,
+  "loadVariables": ".env.ci",
+  "contexts": [
+    {
+      "platforms": ["linux"],
+      "browsers": [
+        {
+          "name": "firefox",
+          "headless": true
+        }
+      ]
+    }
+  ],
+  "concurrentRunners": true,
+  "logLevel": "warning",
+  "telemetry": {
+    "send": true,
+    "userId": "my-company-ci"
+  }
+}
+```
+
+### Multi-Browser Testing
+
+```json .doc-detective.json
+{
+  "input": "tests",
+  "output": "results",
+  "beforeAny": "setup/prepare-environment.spec.json",
+  "afterAll": "cleanup/reset-environment.spec.json",
+  "contexts": [
+    {
+      "platforms": ["windows", "mac", "linux"],
+      "browsers": ["chrome", "firefox"]
+    },
+    {
+      "platforms": ["mac"],
+      "browsers": ["safari"]
+    }
+  ],
+  "concurrentRunners": 4,
+  "logLevel": "info"
+}
+```
+
+### Development Configuration
+
+```json .doc-detective.json
+{
+  "input": "tests",
+  "output": "results",
+  "relativePathBase": "file",
+  "contexts": [
+    {
+      "platforms": ["mac"],
+      "browsers": [
+        {
+          "name": "chrome",
+          "headless": false
+        }
+      ]
+    }
+  ],
+  "debug": true,
+  "logLevel": "debug",
+  "allowUnsafeSteps": true
+}
+```
+
+## Configuration Validation
+
+Doc Detective validates your configuration file using JSON Schema. If there are errors, you'll see detailed messages about what's wrong.
+
+Common validation errors:
+
+- **Missing required fields**: Ensure all required properties are present
+- **Invalid type**: Check that values match the expected type (string, number, boolean, etc.)
+- **Invalid enum value**: Use only allowed values (e.g., log levels must be one of the specified options)
+- **Invalid format**: Ensure paths, URLs, and other formatted strings are correct
+
+## Environment Variables
+
+You can reference environment variables in your configuration using `$VARIABLE_NAME` syntax:
+
+```json
+{
+  "input": "tests",
+  "loadVariables": ".env",
+  "integrations": {
+    "openApi": [
+      {
+        "url": "$API_URL",
+        "auth": {
+          "token": "$API_TOKEN"
+        }
+      }
+    ]
+  }
+}
+```
+
+Load variables from a `.env` file:
+
+```env .env
+API_URL=https://api.example.com/openapi.json
+API_TOKEN=your_secret_token
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep sensitive data out of config files">
+    Use environment variables for API tokens, passwords, and other secrets. Load them with the `loadVariables` option.
+
+    ```json
+    {
+      "loadVariables": ".env",
+      "integrations": {
+        "heretto": [
+          {
+            "apiToken": "$HERETTO_TOKEN"
+          }
+        ]
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use different configs for different environments">
+    Create separate configuration files for development, CI/CD, and production:
+
+    - `.doc-detective.json` (development)
+    - `.doc-detective.ci.json` (CI/CD)
+    - `.doc-detective.prod.json` (production)
+
+    Specify the appropriate config with the `--config` flag.
+  </Accordion>
+
+  <Accordion title="Enable concurrent runners in CI/CD">
+    Speed up test execution in CI/CD by enabling concurrent runners:
+
+    ```json
+    {
+      "concurrentRunners": true
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use relative path base wisely">
+    Set `relativePathBase` to `file` when working with distributed test files. This makes paths relative to each test file's location rather than the working directory.
+  </Accordion>
+</AccordionGroup>
+
+## Configuration Schema
+
+Doc Detective configuration files follow the `config_v3` JSON Schema. You can reference the schema in your config file for IDE validation:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/doc-detective/common/refs/heads/main/dist/schemas/config_v3.schema.json",
+  "input": "tests",
+  "output": "results"
+}
+```
+
+This enables autocomplete and validation in many IDEs.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tests" icon="list-check" href="/concepts/tests">
+    Learn about test specifications, tests, and steps
+  </Card>
+  <Card title="Contexts" icon="desktop" href="/concepts/contexts">
+    Configure platform and browser contexts
+  </Card>
+  <Card title="Configuration Guide" icon="book" href="/guides/configuration">
+    Detailed guide on configuration options
+  </Card>
+  <Card title="Environment Setup" icon="server" href="/guides/ci-cd">
+    Set up Doc Detective in different environments
+  </Card>
+</CardGroup>

@@ -1,0 +1,628 @@
+---
+title: Configuring Doc Detective
+description: Customize Doc Detective's behavior with configuration files to match your project's needs
+---
+
+Doc Detective uses configuration files to control test execution, file detection, inline test patterns, and runtime behavior. Configuration can be specified in JSON or YAML format.
+
+## Configuration Files
+
+Doc Detective looks for configuration in these locations (in order):
+
+1. File specified with `--config` flag
+2. `.doc-detective.json` in current directory
+3. `.doc-detective.yaml` or `.doc-detective.yml` in current directory
+4. Default configuration
+
+<Steps>
+  <Step title="Create a configuration file">
+    Create `.doc-detective.json` in your project root:
+
+    ```bash
+    touch .doc-detective.json
+    ```
+  </Step>
+
+  <Step title="Add basic configuration">
+    Start with minimal configuration:
+
+    ```json
+    {
+      "input": ["./docs"],
+      "recursive": true
+    }
+    ```
+  </Step>
+
+  <Step title="Run with your config">
+    Doc Detective automatically finds and uses your config:
+
+    ```bash
+    npx doc-detective
+    ```
+
+    Or specify a different config file:
+
+    ```bash
+    npx doc-detective --config custom-config.json
+    ```
+  </Step>
+</Steps>
+
+## Core Options
+
+### Input and Output
+
+<ParamField path="input" type="string[]">
+  Files or directories to test. Can include URLs.
+
+  ```json
+  {
+    "input": [
+      "./docs",
+      "./tests/*.spec.json",
+      "https://example.com/doc.md"
+    ]
+  }
+  ```
+</ParamField>
+
+<ParamField path="recursive" type="boolean" default="false">
+  Recursively search directories for test files.
+
+  ```json
+  {
+    "recursive": true
+  }
+  ```
+</ParamField>
+
+<ParamField path="output" type="string">
+  Path to write test results.
+
+  ```json
+  {
+    "output": "./test-results.json"
+  }
+  ```
+</ParamField>
+
+### Setup and Cleanup
+
+<ParamField path="beforeAny" type="string[]">
+  Files to run before any tests execute.
+
+  ```json
+  {
+    "beforeAny": ["./setup.spec.json"]
+  }
+  ```
+</ParamField>
+
+<ParamField path="afterAll" type="string[]">
+  Files to run after all tests complete.
+
+  ```json
+  {
+    "afterAll": ["./cleanup.spec.json"]
+  }
+  ```
+</ParamField>
+
+### Runtime Behavior
+
+<ParamField path="runOn" type="object[]">
+  Default contexts for all tests. Can be overridden per test.
+
+  ```json
+  {
+    "runOn": [
+      {
+        "platforms": ["windows", "mac", "linux"],
+        "browsers": [
+          {
+            "name": "firefox",
+            "headless": true
+          }
+        ]
+      }
+    ]
+  }
+  ```
+</ParamField>
+
+<ParamField path="relativePathBase" type="string" default="cwd">
+  Base path for resolving relative paths. Options: `"cwd"` or `"file"`.
+
+  ```json
+  {
+    "relativePathBase": "file"
+  }
+  ```
+</ParamField>
+
+## File Type Configuration
+
+Define which file types Doc Detective should process and how.
+
+### Basic File Type
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"]
+    }
+  ]
+}
+```
+
+### Inline Test Patterns
+
+Configure comment patterns for inline tests:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"],
+      "inlineStatements": {
+        "testStart": [
+          "{\\/\\*\\s*test\\s+?([\\s\\S]*?)\\s*\\*\\/}",
+          "<!--\\s*test\\s*([\\s\\S]*?)\\s*-->",
+          "\\[comment\\]:\\s+#\\s+\\(test\\s*(.*?)\\s*\\)"
+        ],
+        "testEnd": [
+          "{\\/\\*\\s*test end\\s*\\*\\/}",
+          "<!--\\s*test end\\s*([\\s\\S]*?)\\s*-->",
+          "\\[comment\\]:\\s+#\\s+\\(test end\\)"
+        ],
+        "ignoreStart": [
+          "{\\/\\*\\s*test ignore start\\s*\\*\\/}",
+          "<!--\\s*test ignore start\\s*-->"
+        ],
+        "ignoreEnd": [
+          "{\\/\\*\\s*test ignore end\\s*\\*\\/}",
+          "<!--\\s*test ignore end\\s*-->"
+        ],
+        "step": [
+          "{\\/\\*\\s*step\\s+?([\\s\\S]*?)\\s*\\*\\/}",
+          "<!--\\s*step\\s*([\\s\\S]*?)\\s*-->",
+          "\\[comment\\]:\\s+#\\s+\\(step\\s*(.*?)\\s*\\)"
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Markup Detection Patterns
+
+Define patterns for automatic test detection from documentation:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md"],
+      "markup": [
+        {
+          "name": "goToUrl",
+          "regex": [
+            "\\b(?:[Gg]o\\s+to|[Oo]pen|[Nn]avigate\\s+to|[Vv]isit)\\b\\s+\\[[^\\]]+\\]\\(\\s*(https?:\\/\\/[^\\s)]+)"
+          ],
+          "actions": ["goTo"]
+        },
+        {
+          "name": "clickOnscreenText",
+          "regex": [
+            "\\b(?:[Cc]lick|[Tt]ap|[Ss]elect)\\b\\s+\\*\\*((?:(?!\\*\\*).)+)\\*\\*"
+          ],
+          "actions": ["click"]
+        },
+        {
+          "name": "typeText",
+          "regex": [
+            "\\b(?:enter|type)\\b\\s+\\\"([^\\\"]+)\\\""
+          ],
+          "actions": ["type"]
+        },
+        {
+          "name": "pressEnter",
+          "regex": [
+            "\\bpress Enter\\b"
+          ],
+          "actions": [
+            {
+              "action": "typeKeys",
+              "keys": ["$ENTER$"]
+            }
+          ]
+        },
+        {
+          "name": "findOnscreenText",
+          "regex": [
+            "\\*\\*((?:(?!\\*\\*).)+)\\*\\*"
+          ],
+          "actions": ["find"]
+        },
+        {
+          "name": "checkHyperlink",
+          "regex": [
+            "(?<!\\!)\\[[^\\]]+\\]\\(\\s*(https?:\\/\\/[^\\s)]+)(?:\\s+\\\"[^\\\"]*\\\")?\\s*\\)"
+          ],
+          "actions": ["checkLink"]
+        },
+        {
+          "name": "screenshotImage",
+          "regex": [
+            "!\\[[^\\]]*\\]\\(\\s*([^\\s)]+)(?:\\s+\\\"[^\\\"]*\\\")?\\s*\\)\\s*\\{(?=[^}]*\\.screenshot)[^}]*\\}"
+          ],
+          "actions": ["screenshot"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Executable Files
+
+Run files as shell commands:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "shell-script",
+      "extensions": ["sh"],
+      "runShell": {
+        "command": "bash",
+        "args": ["$1"]
+      }
+    }
+  ]
+}
+```
+
+The `$1` placeholder is replaced with the file path.
+
+## Complete Configuration Example
+
+<Tabs>
+  <Tab title="JSON">
+    ```json
+    {
+      "input": ["./docs", "./tests"],
+      "recursive": true,
+      "output": "./test-results.json",
+      "beforeAny": ["./tests/setup.spec.json"],
+      "afterAll": ["./tests/cleanup.spec.json"],
+      "relativePathBase": "file",
+      "runOn": [
+        {
+          "platforms": ["windows", "mac", "linux"],
+          "browsers": [
+            {
+              "name": "firefox",
+              "headless": true,
+              "viewport": {
+                "width": 1920,
+                "height": 1080
+              }
+            }
+          ]
+        }
+      ],
+      "fileTypes": [
+        {
+          "name": "markdown",
+          "extensions": ["md", "markdown", "mdx"],
+          "inlineStatements": {
+            "testStart": [
+              "<!--\\s*test\\s*([\\s\\S]*?)\\s*-->"
+            ],
+            "testEnd": [
+              "<!--\\s*test end\\s*-->"
+            ],
+            "step": [
+              "<!--\\s*step\\s*([\\s\\S]*?)\\s*-->"
+            ]
+          },
+          "markup": [
+            {
+              "name": "goToUrl",
+              "regex": [
+                "\\b(?:[Gg]o\\s+to|[Oo]pen)\\b\\s+\\[[^\\]]+\\]\\(\\s*(https?:\\/\\/[^\\s)]+)"
+              ],
+              "actions": ["goTo"]
+            }
+          ]
+        }
+      ]
+    }
+    ```
+  </Tab>
+
+  <Tab title="YAML">
+    ```yaml
+    input:
+      - ./docs
+      - ./tests
+    recursive: true
+    output: ./test-results.json
+    beforeAny:
+      - ./tests/setup.spec.json
+    afterAll:
+      - ./tests/cleanup.spec.json
+    relativePathBase: file
+    runOn:
+      - platforms:
+          - windows
+          - mac
+          - linux
+        browsers:
+          - name: firefox
+            headless: true
+            viewport:
+              width: 1920
+              height: 1080
+    fileTypes:
+      - name: markdown
+        extensions:
+          - md
+          - markdown
+          - mdx
+        inlineStatements:
+          testStart:
+            - "<!--\\s*test\\s*([\\s\\S]*?)\\s*-->"
+          testEnd:
+            - "<!--\\s*test end\\s*-->"
+          step:
+            - "<!--\\s*step\\s*([\\s\\S]*?)\\s*-->"
+        markup:
+          - name: goToUrl
+            regex:
+              - "\\b(?:[Gg]o\\s+to|[Oo]pen)\\b\\s+\\[[^\\]]+\\]\\(\\s*(https?:\\/\\/[^\\s)]+)"
+            actions:
+              - goTo
+    ```
+  </Tab>
+</Tabs>
+
+## Environment-Specific Configs
+
+Create different configurations for different environments:
+
+<CodeGroup>
+```json .doc-detective.json
+{
+  "input": ["./docs"],
+  "runOn": [
+    {
+      "browsers": [{ "name": "firefox", "headless": true }]
+    }
+  ]
+}
+```
+
+```json .doc-detective.ci.json
+{
+  "input": ["./docs"],
+  "output": "./test-results.json",
+  "runOn": [
+    {
+      "browsers": [{ "name": "firefox", "headless": true }]
+    }
+  ]
+}
+```
+
+```json .doc-detective.local.json
+{
+  "input": ["./docs"],
+  "runOn": [
+    {
+      "browsers": [{ "name": "firefox", "headless": false }]
+    }
+  ]
+}
+```
+</CodeGroup>
+
+Use specific configs:
+
+```bash
+# Local development
+npx doc-detective --config .doc-detective.local.json
+
+# CI/CD
+npx doc-detective --config .doc-detective.ci.json
+```
+
+## Configuration Precedence
+
+Configuration values are resolved in this order (highest to lowest priority):
+
+1. Command-line arguments
+2. Test-level configuration
+3. Spec-level configuration
+4. Config file
+5. Default values
+
+<Warning>
+Test-level `runOn` overrides spec-level and config-level settings. Use this to run specific tests in different environments.
+</Warning>
+
+## Advanced Options
+
+### DITA Map Processing
+
+<ParamField path="processDitaMaps" type="boolean" default="false">
+  Process DITA maps with the `dita` CLI tool.
+
+  ```json
+  {
+    "processDitaMaps": true,
+    "input": ["./docs/map.ditamap"]
+  }
+  ```
+
+  Requires the DITA Open Toolkit to be installed.
+</ParamField>
+
+### Logging
+
+<ParamField path="logLevel" type="string" default="info">
+  Control logging verbosity. Options: `"silent"`, `"error"`, `"warning"`, `"info"`, `"debug"`.
+
+  ```json
+  {
+    "logLevel": "debug"
+  }
+  ```
+</ParamField>
+
+### Timeouts
+
+<ParamField path="timeout" type="number" default="5000">
+  Default timeout for actions in milliseconds.
+
+  ```json
+  {
+    "timeout": 10000
+  }
+  ```
+</ParamField>
+
+## Custom Markup Patterns
+
+Create your own detection patterns for domain-specific language:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md"],
+      "markup": [
+        {
+          "name": "apiRequest",
+          "regex": [
+            "Send a (GET|POST|PUT|DELETE) request to `([^`]+)`"
+          ],
+          "actions": [
+            {
+              "action": "httpRequest",
+              "method": "$1",
+              "url": "$2"
+            }
+          ]
+        },
+        {
+          "name": "loginUser",
+          "regex": [
+            "Log in as `([^`]+)`"
+          ],
+          "actions": [
+            {
+              "action": "setVariables",
+              "path": ".env"
+            },
+            {
+              "action": "goTo",
+              "url": "https://app.example.com/login"
+            },
+            {
+              "action": "find",
+              "selector": "#username",
+              "typeKeys": { "keys": ["$1"] }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Use in documentation:
+
+```markdown
+Send a POST request to `https://api.example.com/users`.
+
+Log in as `admin@example.com`.
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use version control" icon="code-branch">
+    Commit your configuration file to version control so all team members use the same settings.
+  </Card>
+
+  <Card title="Environment configs" icon="layer-group">
+    Create separate configs for local development and CI/CD environments.
+  </Card>
+
+  <Card title="Start simple" icon="seedling">
+    Begin with minimal configuration and add options as needed.
+  </Card>
+
+  <Card title="Document patterns" icon="book">
+    Add comments explaining custom markup patterns for your team.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Config not being loaded">
+    - Verify the file is named `.doc-detective.json` or `.doc-detective.yaml`
+    - Check for JSON syntax errors (use a JSON validator)
+    - Use `--config` flag to explicitly specify the file
+    - Run with `--logLevel debug` to see configuration loading
+  </Accordion>
+
+  <Accordion title="File types not detected">
+    - Ensure extensions are listed in `fileTypes[].extensions`
+    - Verify file extensions match exactly (case-sensitive)
+    - Check `recursive` is enabled for subdirectories
+  </Accordion>
+
+  <Accordion title="Markup patterns not matching">
+    - Test regex patterns in a regex tester
+    - Verify proper escaping of special characters
+    - Check pattern order (more specific patterns first)
+    - Use `detectSteps: true` in test definition
+  </Accordion>
+
+  <Accordion title="Wrong contexts running">
+    - Check precedence: test > spec > config
+    - Verify platform names: `"windows"`, `"mac"`, `"linux"`
+    - Ensure browser is installed and accessible
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Tests" href="/guides/writing-tests" icon="file-code">
+    Learn how to write test specifications
+  </Card>
+  
+  <Card title="Inline Tests" href="/guides/inline-tests" icon="code">
+    Embed tests in your documentation
+  </Card>
+  
+  <Card title="Contexts" href="/guides/contexts" icon="browsers">
+    Configure multi-platform testing
+  </Card>
+  
+  <Card title="Config Schema" href="/schemas/config" icon="book">
+    Complete configuration schema reference
+  </Card>
+</CardGroup>

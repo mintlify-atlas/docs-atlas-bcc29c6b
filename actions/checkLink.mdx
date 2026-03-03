@@ -1,0 +1,138 @@
+---
+title: checkLink
+description: Check if a URL returns an acceptable HTTP status code
+---
+
+The `checkLink` action verifies that an HTTP or HTTPS URL returns an acceptable status code from a GET request. This is useful for validating links in documentation or testing endpoint availability.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple (String)
+{
+  "action": "checkLink",
+  "url": "https://www.example.com"
+}
+```
+
+```json Simple (Inline)
+"https://www.example.com"
+```
+
+```json Detailed
+{
+  "action": "checkLink",
+  "url": "/api/users",
+  "origin": "https://api.example.com",
+  "statusCodes": [200, 201]
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="url" type="string" required>
+  URL to check. Can be a full URL or a path. If a path is provided, `origin` must be specified.
+  
+  Supports environment variables using `$VARIABLE_NAME` syntax.
+</ParamField>
+
+<ParamField path="origin" type="string">
+  Protocol and domain to prepend to `url`. Used when `url` is a relative path.
+  
+  Example: `"https://api.example.com"`
+</ParamField>
+
+<ParamField path="statusCodes" type="integer | integer[]" default="[200, 301, 302, 307, 308]">
+  Accepted status codes. If the URL returns a code not in this list, the action fails.
+  
+  Can be a single integer or an array of integers.
+</ParamField>
+
+## Examples
+
+### Check a Full URL
+
+Verify that a complete URL is accessible:
+
+```json
+{
+  "action": "checkLink",
+  "url": "https://www.example.com"
+}
+```
+
+### Check a Relative Path
+
+Combine `origin` with a relative path:
+
+```json
+{
+  "action": "checkLink",
+  "url": "/api/v1/users",
+  "origin": "https://api.example.com"
+}
+```
+
+### Accept Specific Status Codes
+
+Only accept specific status codes:
+
+```json
+{
+  "action": "checkLink",
+  "url": "https://api.example.com/health",
+  "statusCodes": 200
+}
+```
+
+### Check Multiple Links
+
+Check several links in sequence:
+
+```json
+{
+  "steps": [
+    "https://example.com",
+    "https://example.com/about",
+    "https://example.com/contact"
+  ]
+}
+```
+
+<Note>
+  The simple string syntax automatically creates a `checkLink` action when used in a steps array.
+</Note>
+
+### Using Environment Variables
+
+Use variables for dynamic URLs:
+
+```json
+{
+  "steps": [
+    {
+      "action": "loadVariables",
+      "path": ".env"
+    },
+    {
+      "action": "checkLink",
+      "url": "$API_URL/health"
+    }
+  ]
+}
+```
+
+## When to Use
+
+- **Link validation** - Verify all links in documentation are working
+- **Endpoint health checks** - Confirm API endpoints are accessible
+- **Redirect verification** - Test that redirects are working correctly
+- **Pre-deployment checks** - Validate URLs before running full test suites
+
+## Related Actions
+
+- [httpRequest](/actions/httpRequest) - For full HTTP request/response testing with body validation
+- [goTo](/actions/goTo) - To navigate to URLs in a browser context

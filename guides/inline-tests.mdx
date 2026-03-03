@@ -1,0 +1,497 @@
+---
+title: Inline Tests in Markdown
+description: Embed test steps directly in your documentation to ensure your instructions stay accurate and testable
+---
+
+Inline tests allow you to embed test steps directly within your markdown documentation. This keeps your tests close to your content and ensures your documentation instructions are always accurate.
+
+## Why Inline Tests?
+
+Inline tests offer several advantages:
+
+- **Co-location**: Tests live with the content they validate
+- **Automatic detection**: Doc Detective can detect tests from natural language
+- **Easy maintenance**: Update tests when you update docs
+- **Documentation as tests**: Your documentation becomes executable
+
+## Two Approaches
+
+Doc Detective supports two methods for inline testing:
+
+1. **Explicit inline tests**: Define test steps using special comments
+2. **Detected tests**: Let Doc Detective infer tests from markdown patterns
+
+## Explicit Inline Tests
+
+Define test steps using markdown comments that Doc Detective recognizes.
+
+### Comment Syntax
+
+Doc Detective supports multiple comment formats:
+
+<Tabs>
+  <Tab title="Markdown Comments">
+    ```markdown
+    [comment]: # (step { "action": "goTo", "url": "https://example.com" })
+    ```
+  </Tab>
+
+  <Tab title="HTML Comments">
+    ```markdown
+    <!-- step { "action": "goTo", "url": "https://example.com" } -->
+    ```
+  </Tab>
+
+  <Tab title="JSX Comments (MDX)">
+    ```markdown
+    {/* step { "action": "goTo", "url": "https://example.com" } */}
+    ```
+  </Tab>
+</Tabs>
+
+### Basic Example
+
+<Steps>
+  <Step title="Write your documentation">
+    Create your markdown content with instructions:
+
+    ```markdown
+    # How to Search for Kittens
+
+    To search for American Shorthair kittens:
+
+    1. Go to [DuckDuckGo](https://www.duckduckgo.com).
+    2. In the search bar, enter "American Shorthair kittens", then press Enter.
+    ```
+  </Step>
+
+  <Step title="Add test steps">
+    Add test step comments after each instruction:
+
+    ```markdown
+    # How to Search for Kittens
+
+    To search for American Shorthair kittens:
+
+    1. Go to [DuckDuckGo](https://www.duckduckgo.com).
+
+       [comment]: # (step { "action": "goTo", "url": "https://www.duckduckgo.com"})
+
+    2. In the search bar, enter "American Shorthair kittens", then press Enter.
+
+       [comment]: # (step { "action": "find", "selector": "#searchbox_input", "click": true })
+       [comment]: # (step { "action": "typeKeys", "keys": ["American Shorthair kittens", "$ENTER$"] })
+       [comment]: # (step { "action": "find", "selector": "[data-testid='web-vertical']" })
+    ```
+  </Step>
+
+  <Step title="Run the test">
+    Doc Detective automatically detects and runs inline tests:
+
+    ```bash
+    npx doc-detective kitten-search.md
+    ```
+  </Step>
+</Steps>
+
+### Test Boundaries
+
+Control where tests start and end:
+
+<Tabs>
+  <Tab title="Test Start">
+    Mark the beginning of a test:
+
+    ```markdown
+    [comment]: # (test start testId: my-test)
+    
+    <!-- Or with more options -->
+    [comment]: # (test { "testId": "my-test", "detectSteps": false })
+    ```
+  </Tab>
+
+  <Tab title="Test End">
+    Mark the end of a test:
+
+    ```markdown
+    [comment]: # (test end)
+    ```
+  </Tab>
+
+  <Tab title="Ignore Sections">
+    Exclude content from test detection:
+
+    ```markdown
+    [comment]: # (test ignore start)
+    
+    This content won't be tested.
+    
+    [comment]: # (test ignore end)
+    ```
+  </Tab>
+</Tabs>
+
+### Complete Example
+
+```markdown
+To search for American Shorthair kittens,
+
+[comment]: # (test { "testId": "kitten-search", "detectSteps": false })
+
+1. Go to [DuckDuckGo](https://www.duckduckgo.com).
+
+   [comment]: # (step { "action": "goTo", "url": "https://www.duckduckgo.com"})
+   [comment]: # (step { "action": "startRecording", "path": "search-results.gif"})
+
+2. In the search bar, enter "American Shorthair kittens", then press Enter.
+
+   [comment]: # (step { "action": "find", "selector": "#searchbox_input", "click": true })
+   [comment]: # (step { "action": "typeKeys", "keys": ["American Shorthair kittens", "$ENTER$"] })
+   [comment]: # (step { "action": "find", "selector": "[data-testid='web-vertical']" })
+   [comment]: # (step { "action": "stopRecording" })
+
+![](search-results.gif)
+
+[comment]: # (test end)
+```
+
+## Detected Tests
+
+Doc Detective can automatically detect test steps from markdown patterns without explicit step comments.
+
+### Enabling Detection
+
+Configure detection patterns in `.doc-detective.json`:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"],
+      "markup": [
+        {
+          "name": "goToUrl",
+          "regex": [
+            "\\b(?:[Gg]o\\s+to|[Oo]pen|[Nn]avigate\\s+to)\\b\\s+\\[[^\\]]+\\]\\(\\s*(https?:\\/\\/[^\\s)]+)"
+          ],
+          "actions": ["goTo"]
+        },
+        {
+          "name": "clickOnscreenText",
+          "regex": [
+            "\\b(?:[Cc]lick|[Tt]ap|[Ss]elect)\\b\\s+\\*\\*((?:(?!\\*\\*).)+)\\*\\*"
+          ],
+          "actions": ["click"]
+        },
+        {
+          "name": "typeText",
+          "regex": [
+            "\\b(?:enter|type)\\b\\s+\"([^\"]+)\""
+          ],
+          "actions": ["type"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Detection Patterns
+
+Doc Detective's default configuration includes these patterns:
+
+<AccordionGroup>
+  <Accordion title="Navigate to URL">
+    **Trigger phrases**: "Go to", "Open", "Navigate to", "Visit"
+
+    ```markdown
+    Go to [DuckDuckGo](https://www.duckduckgo.com).
+    ```
+
+    Generates:
+    ```json
+    { "action": "goTo", "url": "https://www.duckduckgo.com" }
+    ```
+  </Accordion>
+
+  <Accordion title="Click Element">
+    **Trigger phrases**: "Click", "Tap", "Select" + **bold text**
+
+    ```markdown
+    Click **Submit**.
+    ```
+
+    Generates:
+    ```json
+    { "action": "find", "selector": "Submit", "click": true }
+    ```
+  </Accordion>
+
+  <Accordion title="Type Text">
+    **Trigger phrases**: "enter", "type" + **quoted text**
+
+    ```markdown
+    Enter "American Shorthair kittens" in the search bar.
+    ```
+
+    Generates:
+    ```json
+    { "action": "typeKeys", "keys": ["American Shorthair kittens"] }
+    ```
+  </Accordion>
+
+  <Accordion title="Press Enter">
+    **Trigger phrase**: "press Enter"
+
+    ```markdown
+    Press Enter to submit.
+    ```
+
+    Generates:
+    ```json
+    { "action": "typeKeys", "keys": ["$ENTER$"] }
+    ```
+  </Accordion>
+
+  <Accordion title="Find Text">
+    Any **bold text** is treated as something to find:
+
+    ```markdown
+    You should see **Search results**.
+    ```
+
+    Generates:
+    ```json
+    { "action": "find", "selector": "Search results" }
+    ```
+  </Accordion>
+
+  <Accordion title="Check Links">
+    All markdown links are checked by default:
+
+    ```markdown
+    See [our documentation](https://example.com/docs).
+    ```
+
+    Generates:
+    ```json
+    { "action": "checkLink", "url": "https://example.com/docs" }
+    ```
+  </Accordion>
+
+  <Accordion title="Screenshot from Image">
+    Images with `.screenshot` class:
+
+    ```markdown
+    ![Search results](search-results.png){ .screenshot }
+    ```
+
+    Generates:
+    ```json
+    { "action": "saveScreenshot", "path": "search-results.png" }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Detection Example
+
+```markdown
+To search for American Shorthair kittens,
+
+1. Go to [DuckDuckGo](https://www.duckduckgo.com).
+2. In the search bar, enter "American Shorthair kittens", then press Enter.
+
+<!-- step wait: 10000 -->
+
+!["Search results for kittens"](search-results.png){ .screenshot }
+```
+
+Doc Detective detects:
+1. Navigation to DuckDuckGo
+2. Typing the search query
+3. Pressing Enter
+4. A 10-second wait
+5. Screenshot capture
+
+## Combining Both Approaches
+
+You can mix explicit steps with detection:
+
+```markdown
+# User Registration
+
+[comment]: # (test testId: user-registration)
+
+1. Go to [the registration page](https://app.example.com/register).
+
+2. Fill in your details:
+   - Enter "john@example.com" in the email field
+   - Enter "securepassword" in the password field
+
+3. Click **Sign Up**.
+
+   [comment]: # (step { "action": "wait", "duration": 2000 })
+   [comment]: # (step { "action": "find", "selector": ".welcome-message" })
+
+[comment]: # (test end)
+```
+
+## Recording Media
+
+Capture screenshots and recordings during test execution:
+
+### Screenshots
+
+<Tabs>
+  <Tab title="Basic Screenshot">
+    ```markdown
+    [comment]: # (step { "action": "saveScreenshot", "path": "result.png" })
+    
+    ![Result](result.png)
+    ```
+  </Tab>
+
+  <Tab title="With Directory">
+    ```markdown
+    [comment]: # (step { "action": "saveScreenshot", "path": "result.png", "directory": "screenshots" })
+    ```
+  </Tab>
+
+  <Tab title="With Variation">
+    ```markdown
+    [comment]: # (step { "action": "saveScreenshot", "path": "result.png", "maxVariation": 5, "overwrite": "byVariation" })
+    ```
+  </Tab>
+</Tabs>
+
+### Screen Recordings
+
+```markdown
+[comment]: # (step { "action": "startRecording", "path": "demo.gif" })
+
+<!-- Perform your steps -->
+
+[comment]: # (step { "action": "stopRecording" })
+
+![Demo](demo.gif)
+```
+
+<Warning>
+Recordings are only supported in browser contexts, not for shell commands or API tests.
+</Warning>
+
+## Configuration Options
+
+Control inline test behavior in `.doc-detective.json`:
+
+```json
+{
+  "fileTypes": [
+    {
+      "name": "markdown",
+      "extensions": ["md", "markdown", "mdx"],
+      "inlineStatements": {
+        "testStart": [
+          "{\\/\\*\\s*test\\s+?([\\s\\S]*?)\\s*\\*\\/}",
+          "<!--\\s*test\\s*([\\s\\S]*?)\\s*-->",
+          "\\[comment\\]:\\s+#\\s+\\(test\\s*(.*?)\\s*\\)"
+        ],
+        "testEnd": [
+          "{\\/\\*\\s*test end\\s*\\*\\/}",
+          "<!--\\s*test end\\s*([\\s\\S]*?)\\s*-->",
+          "\\[comment\\]:\\s+#\\s+\\(test end\\)"
+        ],
+        "step": [
+          "{\\/\\*\\s*step\\s+?([\\s\\S]*?)\\s*\\*\\/}",
+          "<!--\\s*step\\s*([\\s\\S]*?)\\s*-->",
+          "\\[comment\\]:\\s+#\\s+\\(step\\s*(.*?)\\s*\\)"
+        ]
+      }
+    }
+  ]
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Keep steps simple" icon="minimize">
+    Each step should do one clear action. Break complex operations into multiple steps.
+  </Card>
+
+  <Card title="Use detection wisely" icon="wand-magic-sparkles">
+    Detection works great for simple navigation and clicks. Use explicit steps for complex interactions.
+  </Card>
+
+  <Card title="Add wait steps" icon="hourglass">
+    Pages often need time to load. Add explicit waits after navigation or interactions:
+    ```markdown
+    <!-- step wait: 2000 -->
+    ```
+  </Card>
+
+  <Card title="Test boundaries" icon="brackets-square">
+    Use `test start` and `test end` to clearly define what's being tested, especially in long documents.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tests not being detected">
+    - Verify your `.doc-detective.json` includes the file extension
+    - Check that markup patterns are properly configured
+    - Ensure your markdown follows the expected patterns
+    - Try adding `detectSteps: true` to test definition
+  </Accordion>
+
+  <Accordion title="Steps executing in wrong order">
+    - Use explicit step comments for precise control
+    - Check that steps are in the correct sequence in your markdown
+    - Disable detection (`detectSteps: false`) if needed
+  </Accordion>
+
+  <Accordion title="Screenshots not capturing correctly">
+    - Add a wait step before the screenshot
+    - Verify the element you want to capture is visible
+    - Check the path and directory exist or can be created
+  </Accordion>
+
+  <Accordion title="Comments visible in rendered docs">
+    Use proper comment syntax:
+    - Markdown: `[comment]: # (step ...)`
+    - HTML: `<!-- step ... -->`
+    - JSX/MDX: `{/* step ... */}`
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+**Common Pitfalls**
+
+- Mixing test syntaxes inconsistently within the same document
+- Forgetting to close test boundaries with `test end`
+- Using detection without configuring appropriate regex patterns
+- Not adding waits between steps for dynamic content
+- Placing step comments too far from the instruction they test
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Writing Tests" href="/guides/writing-tests" icon="file-code">
+    Learn about standalone test specifications
+  </Card>
+  
+  <Card title="Configuration" href="/guides/configuration" icon="gear">
+    Customize detection patterns and file types
+  </Card>
+  
+  <Card title="Contexts" href="/guides/contexts" icon="browsers">
+    Test across multiple platforms and browsers
+  </Card>
+  
+  <Card title="Actions Reference" href="/actions/overview" icon="book">
+    Explore all available test actions
+  </Card>
+</CardGroup>

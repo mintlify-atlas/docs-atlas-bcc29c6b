@@ -1,0 +1,276 @@
+---
+title: find
+description: Find page elements and optionally interact with them
+---
+
+The `find` action locates page elements based on various criteria and optionally interacts with them through clicking or typing. It includes built-in waiting, making it ideal for dynamic content.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Find Only
+{
+  "action": "find",
+  "selector": "#search-input"
+}
+```
+
+```json Find and Click
+{
+  "action": "find",
+  "selector": "#search-input",
+  "click": true
+}
+```
+
+```json Find, Click, and Type
+{
+  "action": "find",
+  "selector": "#search-input",
+  "click": true,
+  "type": {
+    "keys": ["kittens", "$ENTER$"]
+  }
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+### Element Finding
+
+At least one of these parameters is required:
+
+<ParamField path="selector" type="string">
+  CSS selector of the element to find.
+</ParamField>
+
+<ParamField path="elementText" type="string">
+  Display text of the element. If combined with other finding fields, the element must match all criteria.
+</ParamField>
+
+<ParamField path="elementId" type="string">
+  ID attribute of the element. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementTestId" type="string">
+  `data-testid` attribute of the element. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementClass" type="string | string[]">
+  Class or array of classes that the element must have. Each class supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementAttribute" type="object">
+  Object of attribute key-value pairs that the element must have. Values can be strings (supporting `/pattern/` regex), numbers, or booleans.
+</ParamField>
+
+<ParamField path="elementAria" type="string">
+  Computed accessible name per ARIA specification. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+### Behavior Options
+
+<ParamField path="timeout" type="integer" default="5000">
+  Maximum duration in milliseconds to wait for the element to exist.
+</ParamField>
+
+<ParamField path="moveTo" type="boolean" default="true">
+  Move to the element. If the element isn't visible, it's scrolled into view.
+</ParamField>
+
+<ParamField path="click" type="boolean | object">
+  Click the element after finding it. Can be `true` for a simple left-click, or an object with a `button` property (`"left"`, `"right"`, or `"middle"`).
+</ParamField>
+
+<ParamField path="type" type="string | object">
+  Type keys after finding the element. Either a string of keys to type, or an object as defined in the [type action](/actions/type).
+  
+  To type in the element, make it active first with the `click` parameter.
+</ParamField>
+
+## Examples
+
+### Basic Element Finding
+
+Simply verify an element exists:
+
+```json
+{
+  "action": "find",
+  "selector": "[data-testid='dashboard']"
+}
+```
+
+### Find with Custom Timeout
+
+Wait longer for slow-loading elements:
+
+```json
+{
+  "action": "find",
+  "selector": ".slow-loading-content",
+  "timeout": 15000
+}
+```
+
+### Find and Click
+
+Locate and click an element:
+
+```json
+{
+  "action": "find",
+  "elementText": "Sign In",
+  "click": true
+}
+```
+
+### Find, Click, and Type
+
+Common pattern for form interactions:
+
+```json
+{
+  "action": "find",
+  "selector": "#search-input",
+  "click": true,
+  "type": {
+    "keys": ["American Shorthair kittens", "$ENTER$"]
+  }
+}
+```
+
+### Right-Click After Finding
+
+Perform a context-menu click:
+
+```json
+{
+  "action": "find",
+  "selector": ".file-item",
+  "click": {
+    "button": "right"
+  }
+}
+```
+
+### Find by Multiple Criteria
+
+Combine finding strategies:
+
+```json
+{
+  "action": "find",
+  "selector": "button",
+  "elementText": "Submit",
+  "elementClass": ["btn", "btn-primary"],
+  "elementAttribute": {
+    "type": "submit",
+    "disabled": false
+  }
+}
+```
+
+### Type with Delay
+
+Simulate realistic typing speed:
+
+```json
+{
+  "action": "find",
+  "selector": "#email-input",
+  "click": true,
+  "type": {
+    "keys": "user@example.com",
+    "inputDelay": 150
+  }
+}
+```
+
+### Find Without Moving
+
+Check element existence without scrolling:
+
+```json
+{
+  "action": "find",
+  "selector": "#footer",
+  "moveTo": false
+}
+```
+
+## Real-World Example
+
+Complete search workflow from the samples:
+
+```json
+{
+  "tests": [
+    {
+      "steps": [
+        {
+          "action": "goTo",
+          "url": "https://www.duckduckgo.com"
+        },
+        {
+          "action": "find",
+          "selector": "#searchbox_input",
+          "click": true,
+          "type": {
+            "keys": ["American Shorthair kittens", "$ENTER$"]
+          }
+        },
+        {
+          "action": "find",
+          "selector": "[data-testid='web-vertical']"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Special Keys
+
+When using the `type` parameter, special keys use `$KEY$` syntax:
+
+- `$ENTER$` - Enter/Return key
+- `$TAB$` - Tab key
+- `$ESCAPE$` - Escape key
+- `$BACKSPACE$` - Backspace key
+- `$DELETE$` - Delete key
+- And more - see [type action](/actions/type) for full list
+
+## Error Handling
+
+The action fails when:
+- Element is not found within the `timeout` period
+- Multiple elements match but cannot be disambiguated
+- Element exists but cannot be interacted with (if `click` or `type` is used)
+
+<Tip>
+  Use more specific finding criteria (combining multiple parameters) if the action finds the wrong element.
+</Tip>
+
+## When to Use vs. Click
+
+- Use **find** when:
+  - Element might not be immediately available (needs waiting)
+  - You want to verify element existence
+  - You need to perform multiple interactions (click + type)
+  - Content is dynamically loaded
+
+- Use **click** when:
+  - Element is guaranteed to exist
+  - You only need to click (no typing)
+  - You want simpler, more explicit test steps
+
+## Related Actions
+
+- [click](/actions/click) - Direct click without waiting
+- [type](/actions/type) - Type keys into elements
+- [goTo](/actions/goTo) - Navigate before finding elements
+- [wait](/actions/wait) - Add explicit waits between actions

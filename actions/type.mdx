@@ -1,0 +1,320 @@
+---
+title: type
+description: Type keys into elements or the active element
+---
+
+The `type` action simulates keyboard input, typing text and special keys into elements. It supports element targeting, typing delays, and a comprehensive set of special keys.
+
+## Basic Usage
+
+<CodeGroup>
+
+```json Simple String
+{
+  "action": "type",
+  "keys": "Hello, world!"
+}
+```
+
+```json With Special Keys
+{
+  "action": "type",
+  "keys": ["username@example.com", "$TAB$", "password123", "$ENTER$"]
+}
+```
+
+```json Target Specific Element
+{
+  "action": "type",
+  "keys": "Search query",
+  "selector": "#search-input"
+}
+```
+
+```json With Typing Delay
+{
+  "action": "type",
+  "keys": "Realistic typing",
+  "inputDelay": 150
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+<ParamField path="keys" type="string | string[]" required>
+  Sequence of keys to enter. Can be a single string or an array of strings.
+  
+  Special keys use `$KEY$` syntax. For example: `"$ENTER$"`, `"$TAB$"`, `"$ESCAPE$"`
+</ParamField>
+
+<ParamField path="inputDelay" type="number" default="100">
+  Delay in milliseconds between each key press. Useful for simulating realistic typing or handling applications that process input slowly.
+</ParamField>
+
+<ParamField path="selector" type="string">
+  CSS selector for the element to type into. If not specified, typing occurs in the currently active element.
+</ParamField>
+
+<ParamField path="elementText" type="string">
+  Display text of the element to type into. If combined with other element finding fields, the element must match all criteria.
+</ParamField>
+
+<ParamField path="elementId" type="string">
+  ID attribute of the element. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementTestId" type="string">
+  `data-testid` attribute of the element. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementClass" type="string | string[]">
+  Class or array of classes that the element must have. Each class supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+<ParamField path="elementAttribute" type="object">
+  Object of attribute key-value pairs that the element must have. Values can be strings (supporting `/pattern/` regex), numbers, or booleans.
+</ParamField>
+
+<ParamField path="elementAria" type="string">
+  Computed accessible name of the element per ARIA specification. Supports exact match or regex pattern using `/pattern/` syntax.
+</ParamField>
+
+## Special Keys
+
+Special keys are wrapped in `$` symbols. Supported keys include:
+
+- **Navigation**: `$ENTER$`, `$TAB$`, `$ESCAPE$`, `$BACKSPACE$`, `$DELETE$`
+- **Arrow Keys**: `$UP$`, `$DOWN$`, `$LEFT$`, `$RIGHT$`
+- **Modifiers**: `$SHIFT$`, `$CONTROL$`, `$ALT$`, `$META$`
+- **Function Keys**: `$F1$` through `$F12$`
+- **Special**: `$SPACE$`, `$HOME$`, `$END$`, `$PAGEUP$`, `$PAGEDOWN$`
+- **Editing**: `$INSERT$`, `$CLEAR$`
+
+<Note>
+  Special key names are case-insensitive. `$Enter$`, `$ENTER$`, and `$enter$` all work.
+</Note>
+
+## Examples
+
+### Type Simple Text
+
+Type into the currently active element:
+
+```json
+{
+  "action": "type",
+  "keys": "Hello, world!"
+}
+```
+
+### Type with Special Keys
+
+Combine text and special keys:
+
+```json
+{
+  "action": "type",
+  "keys": ["Search term", "$ENTER$"]
+}
+```
+
+### Fill a Login Form
+
+Use Tab to navigate between fields:
+
+```json
+{
+  "action": "type",
+  "keys": [
+    "username@example.com",
+    "$TAB$",
+    "SecurePassword123",
+    "$ENTER$"
+  ]
+}
+```
+
+### Type into Specific Element
+
+Target an element by selector:
+
+```json
+{
+  "action": "type",
+  "keys": "American Shorthair kittens",
+  "selector": "#search-input"
+}
+```
+
+### Simulate Realistic Typing
+
+Add delay between keystrokes:
+
+```json
+{
+  "action": "type",
+  "keys": "This looks like a human typed it",
+  "inputDelay": 150
+}
+```
+
+### Navigate with Keyboard
+
+Use arrow keys and Enter:
+
+```json
+{
+  "action": "type",
+  "keys": ["$DOWN$", "$DOWN$", "$ENTER$"]
+}
+```
+
+### Copy-Paste Simulation
+
+Use modifier keys:
+
+```json
+{
+  "action": "type",
+  "keys": ["$CONTROL$", "a", "$CONTROL$", "c"]
+}
+```
+
+### Type by Element Text
+
+Find element by its text content:
+
+```json
+{
+  "action": "type",
+  "keys": "Message content",
+  "elementText": "Type your message"
+}
+```
+
+### Escape a Dialog
+
+Press Escape key:
+
+```json
+{
+  "action": "type",
+  "keys": "$ESCAPE$"
+}
+```
+
+## Typical Usage Pattern
+
+The `type` action is commonly used after clicking or finding an element:
+
+```json
+{
+  "steps": [
+    {
+      "action": "find",
+      "selector": "#email-input",
+      "click": true
+    },
+    {
+      "action": "type",
+      "keys": "user@example.com"
+    }
+  ]
+}
+```
+
+Or combined in a single `find` action:
+
+```json
+{
+  "action": "find",
+  "selector": "#email-input",
+  "click": true,
+  "type": {
+    "keys": "user@example.com"
+  }
+}
+```
+
+## Element Targeting
+
+If no element finding parameters are provided, typing occurs in the currently active element (usually the last clicked element).
+
+To type into a specific element:
+
+1. **Use element parameters** directly in the type action
+2. **Click first** to activate the element, then type
+3. **Use find with type** to locate and type in one action
+
+```json
+// Option 1: Direct targeting
+{
+  "action": "type",
+  "keys": "text",
+  "selector": "#input"
+}
+
+// Option 2: Click then type
+{
+  "steps": [
+    { "action": "click", "selector": "#input" },
+    { "action": "type", "keys": "text" }
+  ]
+}
+
+// Option 3: Find with type
+{
+  "action": "find",
+  "selector": "#input",
+  "click": true,
+  "type": { "keys": "text" }
+}
+```
+
+## Real-World Example
+
+Complete search interaction from the samples:
+
+```json
+{
+  "steps": [
+    {
+      "action": "goTo",
+      "url": "https://www.duckduckgo.com"
+    },
+    {
+      "action": "find",
+      "selector": "#searchbox_input",
+      "click": true,
+      "type": {
+        "keys": ["American Shorthair kittens", "$ENTER$"]
+      }
+    }
+  ]
+}
+```
+
+## Input Delay Use Cases
+
+- **Autocomplete**: Wait for suggestions to appear
+- **Rate limiting**: Avoid triggering rate limits
+- **Animation**: Allow time for animations between keystrokes
+- **Validation**: Give time for per-character validation
+- **Realism**: Simulate human typing speed
+
+```json
+{
+  "action": "type",
+  "keys": "query",
+  "selector": "#autocomplete",
+  "inputDelay": 200
+}
+```
+
+## Related Actions
+
+- [find](/actions/find) - Find elements and type in one action
+- [click](/actions/click) - Activate elements before typing
+- [wait](/actions/wait) - Add pauses between typing actions

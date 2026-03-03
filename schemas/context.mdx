@@ -1,0 +1,262 @@
+---
+title: Context Schema
+description: Define execution contexts for Doc Detective tests
+---
+
+A context defines the environment in which to perform tests. If no contexts are specified but a context is required by one or more tests, Doc Detective attempts to identify a supported context in the current environment and run tests against it.
+
+For example, if a browser isn't specified but is required by steps in the test, Doc Detective will search for and use a supported browser available in the current environment.
+
+## Schema Reference
+
+<ParamField path="$schema" type="string">
+  JSON Schema reference for this object.
+  
+  **Value:** `https://raw.githubusercontent.com/doc-detective/common/refs/heads/main/dist/schemas/context_v3.schema.json`
+</ParamField>
+
+<ParamField path="contextId" type="string">
+  Unique identifier for the context. Auto-generated if not provided.
+</ParamField>
+
+## Platform Configuration
+
+<ParamField path="platforms" type="string | string[]">
+  Platforms to run tests on.
+  
+  **Options:** `linux`, `mac`, `windows`
+  
+  <Expandable title="Examples">
+    ```json
+    "platforms": "linux"
+    ```
+    
+    ```json
+    "platforms": ["windows", "mac", "linux"]
+    ```
+  </Expandable>
+</ParamField>
+
+## Browser Configuration
+
+<ParamField path="browsers" type="string | object | array">
+  Browsers to run tests on. Can be a simple string, a detailed configuration object, or an array of either.
+  
+  **Browser names:** `chrome`, `firefox`, `safari`, `webkit`
+  
+  <Note>
+    `safari` is just a shortcut for `webkit`. Both values are supported for clarity.
+  </Note>
+  
+  ### Simple String
+  
+  ```json
+  "browsers": "chrome"
+  ```
+  
+  ### Browser Object
+  
+  <Expandable title="Browser Object Properties">
+    <ParamField path="name" type="string" required>
+      Name of the browser.
+      
+      **Options:** `chrome`, `firefox`, `safari`, `webkit`
+    </ParamField>
+    
+    <ParamField path="headless" type="boolean" default={true}>
+      If `true`, runs the browser in headless mode (without a visible UI).
+    </ParamField>
+    
+    <ParamField path="window" type="object">
+      Browser window dimensions.
+      
+      <Expandable title="Window Properties">
+        <ParamField path="width" type="integer">
+          Width of the browser window in pixels.
+        </ParamField>
+        
+        <ParamField path="height" type="integer">
+          Height of the browser window in pixels.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="viewport" type="object">
+      Viewport dimensions (the visible area of the web page).
+      
+      <Expandable title="Viewport Properties">
+        <ParamField path="width" type="integer">
+          Width of the viewport in pixels.
+        </ParamField>
+        
+        <ParamField path="height" type="integer">
+          Height of the viewport in pixels.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+  
+  ### Array of Browsers
+  
+  ```json
+  "browsers": ["chrome", "firefox", "webkit"]
+  ```
+</ParamField>
+
+## Examples
+
+### Single Platform and Browser
+
+```json
+{
+  "platforms": "linux",
+  "browsers": "chrome"
+}
+```
+
+### Multiple Platforms and Browsers
+
+```json
+{
+  "platforms": ["windows", "mac", "linux"],
+  "browsers": ["chrome", "firefox", "webkit"]
+}
+```
+
+### Browser with Headless Mode
+
+```json
+{
+  "browsers": {
+    "name": "chrome",
+    "headless": true
+  }
+}
+```
+
+### Multiple Browser Configurations
+
+```json
+{
+  "browsers": [
+    {
+      "name": "chrome",
+      "headless": true
+    },
+    {
+      "name": "firefox",
+      "headless": false
+    }
+  ]
+}
+```
+
+### Browser with Window and Viewport Dimensions
+
+```json
+{
+  "platforms": ["mac", "linux"],
+  "browsers": {
+    "name": "chrome",
+    "headless": true,
+    "window": {
+      "width": 1920,
+      "height": 1080
+    },
+    "viewport": {
+      "width": 1600,
+      "height": 900
+    }
+  }
+}
+```
+
+### Complete Multi-Configuration Example
+
+```json
+{
+  "platforms": ["windows", "mac", "linux"],
+  "browsers": [
+    {
+      "name": "chrome",
+      "headless": true,
+      "window": {
+        "width": 1920,
+        "height": 1080
+      },
+      "viewport": {
+        "width": 1600,
+        "height": 900
+      }
+    },
+    {
+      "name": "firefox",
+      "window": {
+        "width": 1366,
+        "height": 768
+      }
+    },
+    {
+      "name": "webkit",
+      "headless": false,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}
+```
+
+### Safari on macOS
+
+```json
+{
+  "platforms": "mac",
+  "browsers": [
+    {
+      "name": "safari",
+      "window": {
+        "width": 1280,
+        "height": 800
+      }
+    }
+  ]
+}
+```
+
+## Usage in Configuration
+
+Contexts can be specified at multiple levels:
+
+### Config Level
+
+Applies to all tests:
+
+```json
+{
+  "runOn": [
+    {
+      "platforms": "linux",
+      "browsers": "chrome"
+    }
+  ]
+}
+```
+
+### Test Level
+
+Overrides config-level contexts for a specific test:
+
+```json
+{
+  "testId": "my-test",
+  "runOn": [
+    {
+      "platforms": ["mac", "windows"],
+      "browsers": "firefox"
+    }
+  ],
+  "steps": [...]
+}
+```
