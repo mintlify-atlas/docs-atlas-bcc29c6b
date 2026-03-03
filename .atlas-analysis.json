@@ -1,0 +1,107 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Doc Detective",
+  "projectDescription": "An open-source documentation testing framework that validates docs against real product behavior.",
+  "theme": "palm",
+  "primaryColor": "#2E7D32",
+  "lightColor": "#66BB6A",
+  "darkColor": "#1B5E20",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/tests",
+              "concepts/contexts",
+              "concepts/configuration"
+            ]
+          },
+          {
+            "group": "Actions",
+            "pages": [
+              "actions/overview",
+              "actions/checkLink",
+              "actions/click",
+              "actions/find",
+              "actions/goTo",
+              "actions/httpRequest",
+              "actions/type",
+              "actions/wait",
+              "actions/runShell",
+              "actions/runCode",
+              "actions/screenshot",
+              "actions/record",
+              "actions/loadVariables"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/writing-tests",
+              "guides/inline-tests",
+              "guides/configuration",
+              "guides/contexts",
+              "guides/ci-cd"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API",
+            "pages": [
+              "api/overview",
+              "api/runTests",
+              "api/detectTests",
+              "api/resolveTests"
+            ]
+          },
+          {
+            "group": "Schemas",
+            "pages": [
+              "schemas/config",
+              "schemas/test",
+              "schemas/context",
+              "schemas/step"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "CLI and programmatic API for running documentation tests",
+    "Browser automation for UI testing with Puppeteer/Appium",
+    "Inline test detection in Markdown files",
+    "HTTP/API request testing",
+    "Shell command execution and validation",
+    "Screenshot and video recording",
+    "Multi-platform and multi-browser support"
+  ],
+  "publicApiSurface": [
+    "runTests",
+    "getRunner",
+    "detectTests",
+    "detectAndResolveTests",
+    "resolveTests",
+    "readFile",
+    "resolvePaths",
+    "CLI: doc-detective [options]",
+    "CLI: --input <path>",
+    "CLI: --config <path>",
+    "Actions: checkLink, click, find, goTo, httpRequest, type, wait, runShell, runCode, screenshot, record, stopRecord, loadVariables"
+  ]
+}
